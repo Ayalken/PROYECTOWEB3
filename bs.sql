@@ -1,11 +1,53 @@
-CREATE DATABASE registro_notas;
+-- #######################################################################
+-- # ARCHIVO: bs.sql (Script de Base de Datos para Registro de Notas)
+-- # CUMPLE CON: Seguridad, Log de Acceso, Eliminación Lógica, Tablas Detalladas
+-- #######################################################################
+
+-- 1. CREACIÓN Y USO DE LA BASE DE DATOS
+CREATE DATABASE IF NOT EXISTS registro_notas CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE registro_notas;
 
--- Tabla de estudiantes
--- MODIFICAR la tabla estudiante
-CREATE TABLE estudiante (
+-- 2. SEGURIDAD Y LOG DE ACCESO (Requisitos del Licenciado)
+-- --------------------------------------------------------
+
+-- Tabla de Usuarios para Autenticación (Login y Permisos)
+CREATE TABLE IF NOT EXISTS usuario (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    -- Datos del Estudiante
+    nombre_usuario VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE,
+    password_hash VARCHAR(255) NOT NULL, -- Para la contraseña encriptada (bcrypt)
+    rol VARCHAR(20) DEFAULT 'docente', -- Roles: 'admin', 'docente', 'estudiante'
+    activo TINYINT DEFAULT 1
+);
+
+-- Tabla para el Log de Acceso (Registro de Ingreso y Salida)
+CREATE TABLE IF NOT EXISTS log_acceso (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    ip_acceso VARCHAR(45) NOT NULL,
+    evento ENUM('ingreso', 'salida') NOT NULL, -- Requisito: evento [ingreso, salida]
+    browser_agente VARCHAR(255) NOT NULL, -- Requisito: browser
+    fecha_hora DATETIME DEFAULT CURRENT_TIMESTAMP, -- Requisito: fecha y hora
+    FOREIGN KEY (usuario_id) REFERENCES usuario(id)
+);
+
+-- 3. TABLA DE DOCENTES (Requisito: CRUD para datos de docente)
+-- ------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS docente (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    apellidos_nombres VARCHAR(100) NOT NULL,
+    ci VARCHAR(20),
+    telefono VARCHAR(20),
+    activo TINYINT DEFAULT 1 -- Requisito: Eliminación lógica
+);
+
+-- 4. TABLA DE ESTUDIANTES (Requisito: Campos de Filiación y Eliminación Lógica)
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS estudiante (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    -- Datos del Estudiante (Cuadro de Filiación)
     apellidos_nombres VARCHAR(100) NOT NULL,
     carnet_identidad VARCHAR(20) NOT NULL,
     expedido VARCHAR(5),
@@ -18,104 +60,49 @@ CREATE TABLE estudiante (
     -- Datos del Tutor
     apellidos_nombres_tutor VARCHAR(100),
     ci_tutor VARCHAR(20),
-    exp_tutor VARCHAR(5),
     ocupacion_tutor VARCHAR(50),
     telefono_celular_tutor VARCHAR(20),
     domicilio VARCHAR(150),
     -- Otros datos
+    unidad_educativa VARCHAR(100),
     curso VARCHAR(10),
-    docente_id INT, -- FK a la nueva tabla docente
-    activo TINYINT DEFAULT 1
+    docente_id INT, -- Relación con el docente asignado
+    activo TINYINT DEFAULT 1, -- Requisito: Eliminación Lógica
+    
+    FOREIGN KEY (docente_id) REFERENCES docente(id)
 );
 
--- Datos iniciales (opcional)
-INSERT INTO estudiante(nombre, apellido, ci) VALUES 
-('Juan', 'Pérez', '123456'),
-('María', 'Lopez', '789012'),
-('Luis', 'García', '456789');
+-- 5. TABLA DE CAMPOS EXTRA (Requisito: Habilitar nuevos campos dinámicos)
+-- -----------------------------------------------------------------------
 
--------------------------------------------------------
-
--- Tabla de notas
--- Nueva Tabla de Docentes
-CREATE TABLE docente (
+CREATE TABLE IF NOT EXISTS campos_extra (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    apellidos_nombres VARCHAR(100) NOT NULL,
-    ci VARCHAR(20),
-    -- Otros campos similares a la tabla estudiante para consistencia 
-    activo TINYINT DEFAULT 1
+    nombreCampo VARCHAR(50), -- Nombre de la nueva columna (ej. "proyecto_final")
+    tipoCampo VARCHAR(20) -- Tipo de dato (ej. "number", "text")
 );
 
--- MODIFICAR la tabla notas para reflejar los subcampos de la libreta
-CREATE TABLE notas (
+-- 6. TABLA DE NOTAS (Requisito: Estructura detallada Ser, Saber, Hacer, Decidir)
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS notas (
     id INT AUTO_INCREMENT PRIMARY KEY,
     idEstudiante INT NOT NULL,
     idDocente INT,
-    area VARCHAR(50) NOT NULL, -- Lenguaje, Matemática, etc.
+    area VARCHAR(50) NOT NULL, -- Área/Materia (ej. Lenguaje, Matemática)
     trimestre INT NOT NULL, -- 1, 2, o 3
     
-    -- Subcampos SER (Ser, Prom_Ser) [cite: 19]
-    ser_nota DECIMAL(5,2),
-    prom_ser DECIMAL(5,2),
+    -- Campos y subcampos según libreta
+    prom_ser DECIMAL(5,2), -- SER (35 Pts.)
+    prom_saber DECIMAL(5,2), -- SABER (35 Pts.)
+    prom_hacer DECIMAL(5,2), -- HACER (30 Pts.)
+    prom_decidir DECIMAL(5,2), -- DECIDIR (Autoev. 10)
     
-    -- Subcampos SABER (Examen, Prom_Saber) [cite: 19]
-    examen_nota DECIMAL(5,2),
-    prom_saber DECIMAL(5,2),
+    examen_nota DECIMAL(5,2), -- Una de las notas de Saber
     
-    -- Subcampos HACER (Hacer, Prom_Hacer) [cite: 19]
-    hacer_nota DECIMAL(5,2),
-    prom_hacer DECIMAL(5,2),
-    
-    -- Subcampos DECIDIR (Decidir, Prom_Decidir) [cite: 19]
-    decidir_nota DECIMAL(5,2),
-    prom_decidir DECIMAL(5,2),
-    
-    -- Autoevaluación y Nota Final [cite: 19]
     autoeval_nota DECIMAL(5,2),
-    nota_trimestral DECIMAL(5,2),
-    cualitativo VARCHAR(5),
+    nota_trimestral DECIMAL(5,2), -- Suma total (sobre 100)
+    cualitativo VARCHAR(50), -- Valoración Cualitativa
     
     FOREIGN KEY (idEstudiante) REFERENCES estudiante(id),
     FOREIGN KEY (idDocente) REFERENCES docente(id)
-
-    -- Tabla de Usuarios para Autenticación
-CREATE TABLE usuario (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nombre_usuario VARCHAR(50) UNIQUE NOT NULL,
-    email VARCHAR(100) UNIQUE,
-    password_hash VARCHAR(255) NOT NULL, -- Para guardar la contraseña encriptada
-    rol VARCHAR(20) DEFAULT 'docente', -- Para gestionar permisos
-    activo TINYINT DEFAULT 1
 );
-
--- Tabla para el Log de Acceso (Seguridad Requerida)
-CREATE TABLE log_acceso (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    usuario_id INT NOT NULL,
-    ip_acceso VARCHAR(45) NOT NULL,
-    evento ENUM('ingreso', 'salida') NOT NULL,
-    browser_agente VARCHAR(255) NOT NULL,
-    fecha_hora DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (usuario_id) REFERENCES usuario(id)
-);
-);
-
--- Datos iniciales (opcional)
-INSERT INTO notas(idEstudiante, materia, nota1, nota2, notaFinal) VALUES
-(1, 'Matemática', 80, 70, 75),
-(2, 'Física', 90, 85, 88),
-(3, 'Programación', 60, 70, 65);
-
--------------------------------------------------------
-
--- Tabla de campos extra (para agregar campos dinámicos)
-CREATE TABLE campos_extra (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nombreCampo VARCHAR(50),
-    tipoCampo VARCHAR(20)
-);
-
--- Ejemplos de campos extra
-INSERT INTO campos_extra(nombreCampo, tipoCampo) VALUES
-('asistencia', 'number'),
-('proyecto_final', 'number');
