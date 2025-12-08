@@ -1,4 +1,3 @@
-/* /frontend/src/index.css */
 :root {
   font-family: Arial, sans-serif;
   --color-primary: #007bff;
@@ -20,7 +19,6 @@ body {
   min-height: 100vh;
 }
 
-/* --- Menú de Navegación --- */
 .main-menu {
   width: 200px;
   background-color: var(--color-text);
@@ -46,13 +44,12 @@ body {
 }
 
 .main-menu span {
-    margin-top: auto; /* Mueve la info de usuario al final */
+    margin-top: auto; 
     padding: 10px 20px;
     font-size: 0.8em;
     border-top: 1px solid #495057;
 }
 
-/* --- Contenido Principal --- */
 .content {
   flex-grow: 1;
   padding: 30px;
@@ -63,7 +60,6 @@ body {
   margin: 0 auto;
 }
 
-/* --- Tablas (Estilo Registro Pedagógico) --- */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -84,7 +80,6 @@ th {
   color: var(--color-text);
 }
 
-/* Estilo para inputs en tablas (Registro de Notas) */
 .table-input {
     width: 90%;
     padding: 2px;
@@ -92,7 +87,6 @@ th {
     text-align: center;
 }
 
-/* --- Formularios y Botones --- */
 form {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -125,6 +119,5 @@ button:hover {
 .danger-btn { background-color: var(--color-danger); }
 .danger-btn:hover { background-color: #bd2130; }
 
-/* Mensajes */
 .error-message { color: var(--color-danger); margin-top: 10px; }
 .success-message { color: var(--color-success); margin-top: 10px; }

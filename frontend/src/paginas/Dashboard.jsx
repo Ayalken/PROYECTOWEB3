@@ -1,29 +1,23 @@
-// /frontend/src/paginas/Dashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { api } from '../api/index';
 import { getEstudiantes } from '../api/estudiantes';
 
-// Registrar los elementos de ChartJS (necesario para React)
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const Dashboard = () => {
     const [chartData, setChartData] = useState(null);
     const [estudiantes, setEstudiantes] = useState([]);
 
-    // Función para generar el PDF (Requisito)
     const generarLibretaPDF = (idEstudiante, nombre) => {
-        // Llama directamente al endpoint de descarga del backend
         window.open(`http://localhost:3000/reportes/pdf/libreta/${idEstudiante}`, '_blank');
         alert(`Generando libreta para ${nombre}. Revise su carpeta de descargas.`);
     };
 
-    // Cargar datos para el gráfico y lista de estudiantes
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // 1. Obtener datos para el gráfico (Asumiendo que es el promedio del 1er trimestre)
                 const resReportes = await api.get('/reportes/datos/aprovechamiento');
                 const datos = resReportes.data;
 
@@ -40,7 +34,6 @@ const Dashboard = () => {
                     ],
                 });
 
-                // 2. Obtener lista de estudiantes para el reporte individual
                 const resEstudiantes = await getEstudiantes();
                 setEstudiantes(resEstudiantes.data.filter(e => e.activo === 1));
 
@@ -61,7 +54,7 @@ const Dashboard = () => {
         scales: {
             y: {
                 min: 0,
-                max: 110, // Máximo de nota (100 base + 10 autoevaluación)
+                max: 110,
                 title: { display: true, text: 'Nota Promedio' }
             }
         }

@@ -1,9 +1,7 @@
-// /frontend/src/paginas/Estudiantes.jsx
 import React, { useState, useEffect } from 'react';
 import { getEstudiantes, createEstudiante, updateEstudiante, deleteEstudiante } from '../api/estudiantes';
 import { getUserRole } from '../api/auth';
 
-// Estado inicial del formulario (Basado en la tabla 'estudiante')
 const initialFormData = {
     apellidos_nombres: '', carnet_identidad: '', expedido: '',
     fecha_nac_dia: '', fecha_nac_mes: '', fecha_nac_anio: '',
@@ -41,7 +39,7 @@ const Estudiantes = () => {
         setEditingId(estudiante.id);
         setFormData({
             ...estudiante,
-            fecha_nac_dia: estudiante.fecha_nac_dia || '', // Asegurar que no es null
+            fecha_nac_dia: estudiante.fecha_nac_dia || '',
             fecha_nac_mes: estudiante.fecha_nac_mes || '',
             fecha_nac_anio: estudiante.fecha_nac_anio || '',
         });
@@ -71,7 +69,6 @@ const Estudiantes = () => {
     const handleDelete = async (id) => {
         if (window.confirm('¿Está seguro de eliminar lógicamente este estudiante?')) {
             try {
-                // Llama al DELETE lógico
                 await deleteEstudiante(id);
                 setMessage('Estudiante eliminado lógicamente.');
                 fetchEstudiantes();

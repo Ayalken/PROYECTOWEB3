@@ -3,14 +3,12 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { isAuthenticated, logout, getUserRole } from './api/auth';
 
-// Componentes y Páginas
 import Login from './componentes/login.jsx';
 import Menu from './componentes/Menu';
 import Dashboard from './paginas/Dashboard';
 import Estudiantes from './paginas/Estudiantes';
 import Notas from './paginas/Notas';
 
-// 🛡️ Componente para Protección de Rutas (Seguridad y Permisos)
 const ProtectedRoute = ({ children, allowedRoles }) => {
     if (!isAuthenticated()) {
         return <Navigate to="/login" replace />;

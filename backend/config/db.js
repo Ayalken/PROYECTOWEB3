@@ -1,6 +1,6 @@
-const mysql = require("mysql2/promise");
+import { createPool } from "mysql2/promise";
 
-const pool = mysql.createPool({
+const pool = createPool({
     host: "localhost",
     user: "root",
     password: "",
@@ -20,7 +20,7 @@ async function connectDB() {
     }
 }
 
-module.exports = {
+export default {
     connectDB,
     pool
 };

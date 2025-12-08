@@ -1,18 +1,15 @@
-// /frontend/src/componentes/Login.jsx
+
 import React, { useState } from 'react';
 import { login } from '../api/auth';
-// Aquí iría la importación del CAPTCHA
+
 
 const Login = ({ onLogin }) => {
-    // MOCK_TOKEN temporal hasta implementar el CAPTCHA
     const [data, setData] = useState({ nombre_usuario: '', password: '', captcha_token: 'MOCK_TOKEN' });
     const [error, setError] = useState('');
 
     const handleChange = (e) => {
         setData({ ...data, [e.target.name]: e.target.value });
     };
-
-    // const handleCaptcha = (token) => { ... lógica real de CAPTCHA ... };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
