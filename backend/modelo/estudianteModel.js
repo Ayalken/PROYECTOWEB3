@@ -1,4 +1,5 @@
-import { db } from "../config/db.js";
+import dbExport from "../config/db.js";
+const db = dbExport.pool;
 
 export const obtTodosEstudiantes = async () => {
     // La consulta trae solo los activos (Requisito: Eliminación lógica)

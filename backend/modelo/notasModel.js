@@ -1,5 +1,6 @@
 // /modelo/notasModel.js
-import { db } from "../config/db.js";
+import dbExport from "../config/db.js";
+const db = dbExport.pool;
 
 export const obtNotasPorEstudiante = async (id) => {
     // Trae las notas con la estructura de Ser, Saber, Hacer, Decidir

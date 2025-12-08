@@ -1,4 +1,3 @@
-// /controlador/authController.js
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { obtUsuarioPorNombre, insertaUsuario, registrarLogAcceso } from "../modelo/authmodel.js";

@@ -1,5 +1,6 @@
 // /modelo/authModel.js
-import { db } from "../config/db.js";
+import dbExport from "../config/db.js";
+const db = dbExport.pool;
 
 // Busca un usuario para el login
 export const obtUsuarioPorNombre = async (nombre_usuario) => {

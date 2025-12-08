@@ -1,5 +1,5 @@
-// /modelo/docenteModel.js
-import { db } from "../config/db.js";
+import dbExport from "../config/db.js";
+const db = dbExport.pool;
 
 export const obtTodosDocentes = async () => {
     const [resultado] = await db.query("SELECT * FROM docente WHERE activo = 1");

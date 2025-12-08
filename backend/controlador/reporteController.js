@@ -1,6 +1,7 @@
 // /controlador/reporteController.js
 import PDFDocument from 'pdfkit'; // npm install pdfkit
-import { db } from "../config/db.js";
+import dbExport from "../config/db.js";
+const db = dbExport.pool;
 
 // Requisito: Por lo menos un reporte en pdf
 export const generarLibretaPDF = async (req, res) => {
