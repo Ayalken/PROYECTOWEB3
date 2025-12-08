@@ -1,10 +1,30 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import fetch from "node-fetch";
 import { obtUsuarioPorNombre, insertaUsuario, registrarLogAcceso } from "../modelo/authmodel.js";
 
 // IMPORTANTE: Usa una clave secreta fuerte y guárdala en variables de entorno (ENV)
 const JWT_SECRET = process.env.JWT_SECRET || "CLAVE_SECRETA_POR_DEFECTO_CAMBIAR";
+const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"; // Demo key de Google
 const SAL_ROUNDS = 10;
+
+// Función para verificar CAPTCHA con Google reCAPTCHA v3
+const verificarCaptcha = async (token) => {
+    if (!token) return false;
+    try {
+        const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `secret=${RECAPTCHA_SECRET}&response=${token}`
+        });
+        const data = await response.json();
+        // Devuelve true si score > 0.5 (no es bot). Ajusta el threshold según necesites
+        return data.success && data.score > 0.5;
+    } catch (err) {
+        console.error("Error verificando CAPTCHA:", err);
+        return false;
+    }
+};
 
 // Requisito: Validar fortaleza de la contraseña (débil, intermedio o fuerte)
 const validarFortalezaContrasena = (password) => {
@@ -51,10 +71,14 @@ export const registrar = async (req, res) => {
 export const login = async (req, res) => {
     const { nombre_usuario, password, captcha_token } = req.body;
 
-    // TODO: Implementar la verificación real del CAPTCHA aquí.
-    if (!captcha_token || captcha_token === 'INVALIDO') {
-        // Asumiendo que el frontend enviará el token
-        // return res.status(400).json({ mensaje: "CAPTCHA inválido." });
+    // Verificar CAPTCHA (Requisito: CAPTCHA para prevenir fuerza bruta)
+    if (!captcha_token) {
+        return res.status(400).json({ mensaje: "Token CAPTCHA requerido." });
+    }
+
+    const captchaValido = await verificarCaptcha(captcha_token);
+    if (!captchaValido) {
+        return res.status(400).json({ mensaje: "CAPTCHA inválido. Parece que eres un bot." });
     }
 
     try {
