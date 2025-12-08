@@ -1,4 +1,3 @@
-// /modelo/estudianteModel.js
 import { db } from "../config/db.js";
 
 export const obtTodosEstudiantes = async () => {
