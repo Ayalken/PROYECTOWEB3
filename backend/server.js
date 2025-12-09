@@ -13,7 +13,6 @@ import { obtUsuarioPorNombre, insertaUsuario } from "./modelo/authmodel.js";
 const app = express();
 app.use(cors());
 app.use(express.json());
-
 app.use((req, res, next) => {
     req.clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     req.userAgent = req.headers['user-agent'] || 'Desconocido';
@@ -25,13 +24,11 @@ app.use("/estudiantes", estudianteRoutes);
 app.use("/docentes", docenteRoutes);
 app.use("/notas", notasRoutes);
 app.use("/campos-extra", camposExtraRoutes);
-app.use("/reportes", reporteRoutes); // Reportes PDF
+app.use("/reportes", reporteRoutes);
 
-// Servidor
 app.listen(3000, async () => {
     await dbExport.connectDB();
 
-    // Asegurar que exista un usuario admin por defecto
     const ensureAdmin = async () => {
         try {
             const existente = await obtUsuarioPorNombre('admin');

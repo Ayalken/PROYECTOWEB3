@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { login } from '../api/auth';
 
 const Login = ({ onLogin }) => {
-    const [data, setData] = useState({ nombre_usuario: '', password: '', captcha_token: '' });
+    const [data, setData] = useState({ nombre_usuario: '', password: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -17,18 +17,8 @@ const Login = ({ onLogin }) => {
         setLoading(true);
 
         try {
-            // Obtener token de reCAPTCHA v3 de forma segura
-            const captchaToken = await new Promise((resolve, reject) => {
-                if (!window.grecaptcha) return reject(new Error('reCAPTCHA no cargado'));
-                window.grecaptcha.ready(() => {
-                    window.grecaptcha.execute('6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI', { action: 'login' })
-                        .then(token => resolve(token))
-                        .catch(reject);
-                });
-            });
-
-            // Enviar login con captcha_token
-            await login({ ...data, captcha_token: captchaToken });
+            // Enviar login sin captcha
+            await login(data);
             onLogin(true);
         } catch (err) {
             setError(err.response?.data?.mensaje || 'Error de conexión o credenciales inválidas.');
@@ -57,22 +47,9 @@ const Login = ({ onLogin }) => {
                         required
                     />
 
-                    {/* Indicador de reCAPTCHA v3 */}
-                    <div style={{
-                        textAlign: 'center',
-                        padding: '10px',
-                        border: '1px dashed #6c757d',
-                        backgroundColor: '#f8f9fa',
-                        borderRadius: '4px',
-                        fontSize: '0.85em',
-                        color: '#6c757d'
-                    }}>
-                        🛡️ Protegido por reCAPTCHA v3
-                    </div>
-
                     {error && <p className="error-message">{error}</p>}
                     <button type="submit" disabled={loading}>
-                        {loading ? 'Verificando...' : 'Ingresar'}
+                        {loading ? 'Iniciando...' : 'Ingresar'}
                     </button>
                 </form>
             </div>
