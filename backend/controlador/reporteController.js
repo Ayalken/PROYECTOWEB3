@@ -62,3 +62,105 @@ export const obtenerDatosGrafico = async (req, res) => {
         res.status(500).json({ mensaje: "Error al obtener datos para el gráfico" });
     }
 };
+
+// Obtener estadísticas por semestre y notas de estudiantes
+export const obtenerEstadisticasPorSemestre = async (req, res) => {
+    try {
+        const [estadisticas] = await db.query(`
+            SELECT 
+                e.id as idEstudiante,
+                e.apellidos_nombres,
+                e.curso,
+                n.trimestre as semestre,
+                n.area,
+                n.nota_trimestral,
+                n.cualitativo,
+                n.prom_ser,
+                n.prom_saber,
+                n.prom_hacer,
+                n.prom_decidir
+            FROM estudiante e
+            LEFT JOIN notas n ON e.id = n.idEstudiante
+            WHERE e.activo = 1
+            ORDER BY e.apellidos_nombres, n.trimestre, n.area
+        `);
+
+        // Agrupar por estudiante y semestre
+        const datosAgrupados = {};
+        estadisticas.forEach(item => {
+            if (!datosAgrupados[item.idEstudiante]) {
+                datosAgrupados[item.idEstudiante] = {
+                    id: item.idEstudiante,
+                    nombre: item.apellidos_nombres,
+                    curso: item.curso,
+                    semestres: {}
+                };
+            }
+            if (item.semestre) {
+                if (!datosAgrupados[item.idEstudiante].semestres[item.semestre]) {
+                    datosAgrupados[item.idEstudiante].semestres[item.semestre] = [];
+                }
+                datosAgrupados[item.idEstudiante].semestres[item.semestre].push({
+                    area: item.area,
+                    notaTrimestral: item.nota_trimestral,
+                    cualitativo: item.cualitativo,
+                    promSer: item.prom_ser,
+                    promSaber: item.prom_saber,
+                    promHacer: item.prom_hacer,
+                    promDecidir: item.prom_decidir
+                });
+            }
+        });
+
+        res.json(Object.values(datosAgrupados));
+    } catch (err) {
+        console.error("Error al obtener estadísticas por semestre:", err);
+        res.status(500).json({ mensaje: "Error al obtener estadísticas por semestre" });
+    }
+};
+
+// Generar reporte PDF general (todos los estudiantes)
+export const generarReportePDFGeneral = async (req, res) => {
+    try {
+        const [estudiantes] = await db.query(`
+            SELECT 
+                e.id,
+                e.apellidos_nombres,
+                e.curso,
+                AVG(n.nota_trimestral) as promedio_general
+            FROM estudiante e
+            LEFT JOIN notas n ON e.id = n.idEstudiante
+            WHERE e.activo = 1
+            GROUP BY e.id, e.apellidos_nombres, e.curso
+            ORDER BY e.apellidos_nombres
+        `);
+
+        const doc = new PDFDocument();
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="reporte_general_estudiantes_${Date.now()}.pdf"`);
+
+        doc.pipe(res);
+
+        // Título
+        doc.fontSize(18).text('REPORTE GENERAL DE ESTUDIANTES', { align: 'center' });
+        doc.fontSize(10).text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, { align: 'center' });
+        doc.moveDown();
+
+        // Tabla de estudiantes
+        doc.fontSize(11).text('Listado de Estudiantes y Promedios Generales:', { underline: true });
+        doc.moveDown(0.5);
+
+        estudiantes.forEach((estudiante, index) => {
+            doc.fontSize(9);
+            doc.text(`${index + 1}. ${estudiante.apellidos_nombres}`);
+            doc.text(`   Curso: ${estudiante.curso || 'N/A'} | Promedio General: ${estudiante.promedio_general ? estudiante.promedio_general.toFixed(2) : 'Sin notas'}`, { continued: false });
+            doc.moveDown(0.3);
+        });
+
+        doc.end();
+
+    } catch (err) {
+        console.error("Error al generar reporte PDF general:", err);
+        res.status(500).json({ mensaje: "Error al generar el reporte PDF general" });
+    }
+};

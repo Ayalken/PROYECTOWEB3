@@ -7,7 +7,7 @@ const Menu = ({ onLogout, userRole }) => {
 
     return (
         <nav className="main-menu">
-            <Link to="/dashboard">📊 Dashboard</Link>
+            <Link to="/dashboard">📊 Panel de Control</Link>
 
             {isDocente && (
                 <Link to="/estudiantes">📋 Filiación Estudiantes</Link>

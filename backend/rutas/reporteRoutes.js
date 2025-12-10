@@ -1,6 +1,6 @@
 // /rutas/reporteRoutes.js
 import express from "express";
-import { generarLibretaPDF, obtenerDatosGrafico } from "../controlador/reporteController.js";
+import { generarLibretaPDF, obtenerDatosGrafico, obtenerEstadisticasPorSemestre, generarReportePDFGeneral } from "../controlador/reporteController.js";
 import { protegerRuta } from "../controlador/authController.js";
 
 const router = express.Router();
@@ -10,5 +10,11 @@ router.get("/pdf/libreta/:id", protegerRuta, generarLibretaPDF);
 
 // Ruta para obtener los datos crudos del gráfico (Protegida)
 router.get("/datos/aprovechamiento", protegerRuta, obtenerDatosGrafico);
+
+// Ruta para obtener estadísticas por semestre
+router.get("/datos/por-semestre", protegerRuta, obtenerEstadisticasPorSemestre);
+
+// Ruta para generar reporte PDF general
+router.get("/pdf/general", protegerRuta, generarReportePDFGeneral);
 
 export default router;
