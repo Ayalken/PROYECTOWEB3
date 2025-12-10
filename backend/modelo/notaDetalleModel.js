@@ -2,17 +2,22 @@ import dbExport from "../config/db.js";
 const db = dbExport.pool;
 
 // Obtener todas las notas detalle por estudiante y semestre
-export const obtNotasDetallePorEstudiante = async (idEstudiante, semestre) => {
-    const [resultado] = await db.query(
-        "SELECT * FROM nota_detalle WHERE idEstudiante = ? AND semestre = ? ORDER BY tipo",
-        [idEstudiante, semestre]
-    );
+export const obtNotasDetallePorEstudiante = async (idEstudiante, semestre, materia_id = null) => {
+    // Si se provee materia_id, filtramos por ella; si no, devolvemos todas las materias para ese estudiante/semestre
+    let query = "SELECT * FROM nota_detalle WHERE idEstudiante = ? AND semestre = ?";
+    const params = [idEstudiante, semestre];
+    if (materia_id !== null && materia_id !== undefined) {
+        query += " AND materia_id = ?";
+        params.push(materia_id);
+    }
+    query += " ORDER BY tipo";
+    const [resultado] = await db.query(query, params);
     return resultado;
 };
 
 // Insertar nota detalle (tarea, examen, proyecto)
 export const insertaNotaDetalle = async (data) => {
-    const { idEstudiante, semestre, tipo, descripcion, nota } = data;
+    const { idEstudiante, semestre, tipo, descripcion, nota, materia_id } = data;
 
     // Validar datos requeridos
     if (!idEstudiante || idEstudiante === undefined || idEstudiante === null) {
@@ -37,8 +42,8 @@ export const insertaNotaDetalle = async (data) => {
         throw new Error('idEstudiante, semestre y nota deben ser números');
     }
 
-    const query = "INSERT INTO nota_detalle (idEstudiante, semestre, tipo, descripcion, nota) VALUES (?, ?, ?, ?, ?)";
-    const [resultado] = await db.query(query, [idEstudianteNum, semestreNum, tipo, descripcion || null, notaNum]);
+    const query = "INSERT INTO nota_detalle (idEstudiante, semestre, tipo, descripcion, nota, materia_id) VALUES (?, ?, ?, ?, ?, ?)";
+    const [resultado] = await db.query(query, [idEstudianteNum, semestreNum, tipo, descripcion || null, notaNum, materia_id || null]);
     return { id: resultado.insertId, ...data };
 };
 

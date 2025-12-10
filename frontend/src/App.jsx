@@ -11,6 +11,7 @@ import Notas from './paginas/Notas';
 import Asistencia from './componentes/Asistencia.jsx';
 import GestionDocentes from './componentes/GestionDocentes.jsx';
 import GestionUsuarios from './componentes/GestionUsuarios.jsx';
+import Materias from './componentes/Materias.jsx';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
     if (!isAuthenticated()) {
@@ -65,6 +66,9 @@ const App = () => {
 
                         {/* Gestión de Usuarios (Solo Admin) */}
                         <Route path="/gestion-usuarios" element={<ProtectedRoute allowedRoles={['admin']}><GestionUsuarios /></ProtectedRoute>} />
+
+                        {/* Gestión de materias (Solo Admin) */}
+                        <Route path="/materias" element={<ProtectedRoute allowedRoles={["admin"]}><Materias /></ProtectedRoute>} />
 
                         {/* Ruta por defecto: redirige al dashboard si está logueado, sino al login */}
                         <Route path="*" element={<Navigate to={loggedIn ? "/dashboard" : "/login"} />} />
