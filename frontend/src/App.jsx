@@ -8,6 +8,9 @@ import Menu from './componentes/Menu';
 import Dashboard from './paginas/Dashboard';
 import Estudiantes from './paginas/Estudiantes';
 import Notas from './paginas/Notas';
+import Asistencia from './componentes/Asistencia.jsx';
+import GestionDocentes from './componentes/GestionDocentes.jsx';
+import GestionUsuarios from './componentes/GestionUsuarios.jsx';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
     if (!isAuthenticated()) {
@@ -53,6 +56,15 @@ const App = () => {
 
                         {/* Registro de Notas (Rol: Docente o Admin) */}
                         <Route path="/notas" element={<ProtectedRoute allowedRoles={['admin', 'docente']}><Notas /></ProtectedRoute>} />
+
+                        {/* Registro de Asistencia (Rol: Docente o Admin) */}
+                        <Route path="/asistencia" element={<ProtectedRoute allowedRoles={['admin', 'docente']}><Asistencia /></ProtectedRoute>} />
+
+                        {/* Gestión de Docentes (Solo Admin) */}
+                        <Route path="/gestion-docentes" element={<ProtectedRoute allowedRoles={['admin']}><GestionDocentes /></ProtectedRoute>} />
+
+                        {/* Gestión de Usuarios (Solo Admin) */}
+                        <Route path="/gestion-usuarios" element={<ProtectedRoute allowedRoles={['admin']}><GestionUsuarios /></ProtectedRoute>} />
 
                         {/* Ruta por defecto: redirige al dashboard si está logueado, sino al login */}
                         <Route path="*" element={<Navigate to={loggedIn ? "/dashboard" : "/login"} />} />

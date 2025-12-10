@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/index';
 import { getEstudiantes } from '../api/estudiantes';
 
@@ -6,21 +6,25 @@ const AREAS = ['LENGUAJE', 'MATEMÁTICAS', 'CIENCIAS SOCIALES', 'CIENCIAS NATURA
 
 const Notas = () => {
     const [estudiantes, setEstudiantes] = useState([]);
-    const [notasPorEstudiante, setNotasPorEstudiante] = useState({});
+    const [notasPorArea, setNotasPorArea] = useState({});
     const [areaSeleccionada, setAreaSeleccionada] = useState(AREAS[0]);
     const [trimestre, setTrimestre] = useState(1);
     const [message, setMessage] = useState('');
     const [cargando, setCargando] = useState(false);
 
-    // Subcolumnas dinámicas
-    const [tareasActuales, setTareasActuales] = useState(["Tarea 1"]);
-    const [proyectosActuales, setProyectosActuales] = useState(["Proyecto 1"]);
-    const [examenesActuales, setExamenesActuales] = useState(["Examen 1"]);
+    const getKey = (area, tri) => `${area}_${tri}`;
+    const [tareasMap, setTareasMap] = useState({});
+    const [proyectosMap, setProyectosMap] = useState({});
+    const [examenesMap, setExamenesMap] = useState({});
 
-    // Reemplazo simplificado: usar las listas locales actuales para evitar inconsistencias
-    const tareas = tareasActuales;
-    const proyectos = proyectosActuales;
-    const examenes = examenesActuales;
+    const currentKey = getKey(areaSeleccionada, trimestre);
+    const tareas = tareasMap[currentKey] || ["Tarea 1"];
+    const proyectos = proyectosMap[currentKey] || ["Proyecto 1"];
+    const examenes = examenesMap[currentKey] || ["Examen 1"];
+
+    const setTareas = (arr) => setTareasMap(prev => ({ ...prev, [currentKey]: arr }));
+    const setProyectos = (arr) => setProyectosMap(prev => ({ ...prev, [currentKey]: arr }));
+    const setExamenes = (arr) => setExamenesMap(prev => ({ ...prev, [currentKey]: arr }));
 
     // Cargar estudiantes al montar
     useEffect(() => {
@@ -52,48 +56,54 @@ const Notas = () => {
                         });
 
                         if (response.data && Array.isArray(response.data)) {
-                            // Agrupar notas por tipo y mantener orden mediante descripciones definidas
+                            // Agrupar notas por tipo
                             const notasPorTipo = { tareas: [], proyectos: [], examenes: [] };
+                            const columnasUsadas = { tareas: new Set(), proyectos: new Set(), examenes: new Set() };
 
                             response.data.forEach(nota => {
                                 if (nota.tipo === 'tarea') {
-                                    notasPorTipo.tareas.push({ descripcion: nota.descripcion, nota: nota.nota });
+                                    notasPorTipo.tareas.push(nota.nota);
+                                    columnasUsadas.tareas.add(nota.descripcion);
                                 } else if (nota.tipo === 'proyecto') {
-                                    notasPorTipo.proyectos.push({ descripcion: nota.descripcion, nota: nota.nota });
+                                    notasPorTipo.proyectos.push(nota.nota);
+                                    columnasUsadas.proyectos.add(nota.descripcion);
                                 } else if (nota.tipo === 'examen') {
-                                    notasPorTipo.examenes.push({ descripcion: nota.descripcion, nota: nota.nota });
+                                    notasPorTipo.examenes.push(nota.nota);
+                                    columnasUsadas.examenes.add(nota.descripcion);
                                 }
                             });
 
-                            // Convertir a arrays numéricos alineados con las subcolumnas actuales
-                            const tareasNums = tareas.map(t => {
-                                const found = notasPorTipo.tareas.find(n => n.descripcion === t);
-                                return found ? Number(found.nota) : 0;
-                            });
-                            const proyectosNums = proyectos.map(p => {
-                                const found = notasPorTipo.proyectos.find(n => n.descripcion === p);
-                                return found ? Number(found.nota) : 0;
-                            });
-                            const examenesNums = examenes.map(ex => {
-                                const found = notasPorTipo.examenes.find(n => n.descripcion === ex);
-                                return found ? Number(found.nota) : 0;
-                            });
+                            notasData[estudiante.id] = notasPorTipo;
 
-                            notasData[estudiante.id] = {
-                                tareas: tareasNums,
-                                proyectos: proyectosNums,
-                                examenes: examenesNums
-                            };
-                        } else {
-                            notasData[estudiante.id] = { tareas: Array(tareas.length).fill(0), proyectos: Array(proyectos.length).fill(0), examenes: Array(examenes.length).fill(0) };
+                            // Actualizar columnas si hay datos guardados
+                            if (columnasUsadas.tareas.size > 0) {
+                                setTareasMap(prev => ({
+                                    ...prev,
+                                    [currentKey]: Array.from(columnasUsadas.tareas)
+                                }));
+                            }
+                            if (columnasUsadas.proyectos.size > 0) {
+                                setProyectosMap(prev => ({
+                                    ...prev,
+                                    [currentKey]: Array.from(columnasUsadas.proyectos)
+                                }));
+                            }
+                            if (columnasUsadas.examenes.size > 0) {
+                                setExamenesMap(prev => ({
+                                    ...prev,
+                                    [currentKey]: Array.from(columnasUsadas.examenes)
+                                }));
+                            }
                         }
                     } catch (error) {
                         // Estudiante sin notas aún
-                        notasData[estudiante.id] = { tareas: Array(tareas.length).fill(0), proyectos: Array(proyectos.length).fill(0), examenes: Array(examenes.length).fill(0) };
                     }
                 }
 
-                setNotasPorEstudiante(notasData);
+                setNotasPorArea(prev => ({
+                    ...prev,
+                    [currentKey]: notasData
+                }));
             } catch (error) {
                 console.log('Error al cargar notas:', error.message);
             } finally {
@@ -102,7 +112,7 @@ const Notas = () => {
         };
 
         fetchNotas();
-    }, [areaSeleccionada, trimestre, estudiantes]);
+    }, [areaSeleccionada, trimestre, estudiantes, currentKey]);
 
     // Funciones para agregar/eliminar subcolumnas
     const agregarTarea = () => setTareas([...tareas, `Tarea ${tareas.length + 1}`]);
@@ -112,61 +122,15 @@ const Notas = () => {
     const agregarExamen = () => setExamenes([...examenes, `Examen ${examenes.length + 1}`]);
     const eliminarExamen = (idx) => setExamenes(examenes.filter((_, i) => i !== idx));
 
-    // Obtener nota por descripción
-    const obtenerNota = (idEstudiante, tipo, descripcion) => {
-        const notas = notasPorEstudiante[idEstudiante] || [];
-        const nota = notas.find(n => n.tipo === tipo && n.descripcion === descripcion);
-        return nota ? nota.nota : '';
-    };
-
-    // Actualizar nota temporal
-    const handleChangeNota = (idEstudiante, tipo, descripcion, value) => {
-        const notasData = { ...notasPorEstudiante };
-        if (!notasData[idEstudiante]) notasData[idEstudiante] = [];
-
-        const index = notasData[idEstudiante].findIndex(n => n.tipo === tipo && n.descripcion === descripcion);
-        if (index >= 0) {
-            notasData[idEstudiante][index].nota = parseFloat(value) || 0;
-        } else {
-            notasData[idEstudiante].push({
-                idEstudiante,
-                semestre: trimestre,
-                tipo,
-                descripcion,
-                nota: parseFloat(value) || 0
-            });
-        }
-        setNotasPorEstudiante(notasData);
-    };
-
-    // Actualizar nota usando índices de subcolumnas (tareas/proyectos/examenes)
-    const handleNotaDinamica = (idEstudiante, tipoGrupo, idx, value) => {
-        const notasData = { ...notasPorEstudiante };
-        if (!notasData[idEstudiante]) {
-            notasData[idEstudiante] = {
-                tareas: Array(tareas.length).fill(0),
-                proyectos: Array(proyectos.length).fill(0),
-                examenes: Array(examenes.length).fill(0)
-            };
-        }
-
-        const val = value === '' ? 0 : Number(value);
-
-        if (tipoGrupo === 'tareas') {
-            const arr = Array.from(notasData[idEstudiante].tareas || Array(tareas.length).fill(0));
-            arr[idx] = val;
-            notasData[idEstudiante].tareas = arr;
-        } else if (tipoGrupo === 'proyectos') {
-            const arr = Array.from(notasData[idEstudiante].proyectos || Array(proyectos.length).fill(0));
-            arr[idx] = val;
-            notasData[idEstudiante].proyectos = arr;
-        } else if (tipoGrupo === 'examenes') {
-            const arr = Array.from(notasData[idEstudiante].examenes || Array(examenes.length).fill(0));
-            arr[idx] = val;
-            notasData[idEstudiante].examenes = arr;
-        }
-
-        setNotasPorEstudiante(notasData);
+    // Manejo de notas dinámicas
+    const handleNotaDinamica = (idEstudiante, tipo, idx, value) => {
+        const updatedNotasPorArea = { ...notasPorArea };
+        if (!updatedNotasPorArea[currentKey]) updatedNotasPorArea[currentKey] = {};
+        const currentNota = updatedNotasPorArea[currentKey][idEstudiante] || { tareas: [], proyectos: [], examenes: [] };
+        if (!currentNota[tipo]) currentNota[tipo] = [];
+        currentNota[tipo][idx] = parseFloat(value) || 0;
+        updatedNotasPorArea[currentKey][idEstudiante] = currentNota;
+        setNotasPorArea(updatedNotasPorArea);
     };
 
     // Calcular promedios
@@ -178,10 +142,13 @@ const Notas = () => {
 
     // Guardar nota
     const handleSaveNota = async (idEstudiante) => {
-        const notaData = notasPorEstudiante[idEstudiante];
+        const notaData = notasPorArea[currentKey] && notasPorArea[currentKey][idEstudiante];
         if (!notaData) return;
 
         try {
+            // Primero eliminar notas anteriores de este estudiante para este semestre
+            await api.delete(`/notas-detalle-estudiante?idEstudiante=${idEstudiante}&semestre=${trimestre}`);
+
             // Guardar cada tarea, proyecto y examen como registro individual
             const registrosAGuardar = [];
 
@@ -236,7 +203,6 @@ const Notas = () => {
             setTimeout(() => setMessage(''), 3000);
         } catch (error) {
             const errorMsg = error.response?.data?.error || error.response?.data?.mensaje || error.message;
-            console.error("Error detallado:", error.response?.data);
             setMessage(`❌ Error al guardar notas: ${errorMsg}`);
         }
     };
@@ -314,7 +280,7 @@ const Notas = () => {
                 </thead>
                 <tbody>
                     {estudiantes.map((e, index) => {
-                        const currentNota = notasPorEstudiante[e.id] || { tareas: Array(tareas.length).fill(0), proyectos: Array(proyectos.length).fill(0), examenes: Array(examenes.length).fill(0) };
+                        const currentNota = (notasPorArea[currentKey] && notasPorArea[currentKey][e.id]) || { tareas: [], proyectos: [], examenes: [] };
                         const arrTareas = currentNota.tareas || Array(tareas.length).fill(0);
                         const arrProyectos = currentNota.proyectos || Array(proyectos.length).fill(0);
                         const arrExamenes = currentNota.examenes || Array(examenes.length).fill(0);

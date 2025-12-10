@@ -6,9 +6,11 @@ import camposExtraRoutes from "./rutas/camposExtraRoutes.js";
 import authRoutes from "./rutas/authRoutes.js";
 import docenteRoutes from "./rutas/docenteRoutes.js";
 import reporteRoutes from "./rutas/reporteRoutes.js";
+import asistenciaRoutes from "./rutas/asistenciaRoutes.js";
 import dbExport from "./config/db.js";
 import bcrypt from "bcrypt";
 import { obtUsuarioPorNombre, insertaUsuario } from "./modelo/authmodel.js";
+import notaDetalleRoutes from "./rutas/notaDetalleRoutes.js";
 
 const app = express();
 app.use(cors());
@@ -25,6 +27,27 @@ app.use("/docentes", docenteRoutes);
 app.use("/notas", notasRoutes);
 app.use("/campos-extra", camposExtraRoutes);
 app.use("/reportes", reporteRoutes);
+app.use("/asistencia", asistenciaRoutes);
+app.use("/notas-detalle", notaDetalleRoutes);
+
+// Ruta de prueba para debuggear nota_detalle
+app.post("/test-nota", async (req, res) => {
+    try {
+        console.log("POST /test-nota recibida con datos:", req.body);
+        const { idEstudiante, semestre, tipo, descripcion, nota } = req.body;
+
+        if (!idEstudiante || !semestre || !tipo || nota === undefined) {
+            return res.status(400).json({ error: "Faltan parámetros" });
+        }
+
+        const query = "INSERT INTO nota_detalle (idEstudiante, semestre, tipo, descripcion, nota) VALUES (?, ?, ?, ?, ?)";
+        const [resultado] = await dbExport.pool.query(query, [idEstudiante, semestre, tipo, descripcion || null, nota]);
+        res.json({ success: true, id: resultado.insertId });
+    } catch (err) {
+        console.error("Error en /test-nota:", err.message);
+        res.status(500).json({ error: err.message, stack: err.stack });
+    }
+});
 
 app.listen(3000, async () => {
     await dbExport.connectDB();
@@ -46,6 +69,29 @@ app.listen(3000, async () => {
         }
     };
 
+    const ensureNotaDetalleTable = async () => {
+        try {
+            const createTableSQL = `
+                CREATE TABLE IF NOT EXISTS nota_detalle (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    idEstudiante INT NOT NULL,
+                    semestre INT NOT NULL,
+                    tipo ENUM('tarea','examen','proyecto') NOT NULL,
+                    descripcion VARCHAR(100),
+                    nota DECIMAL(5,2) NOT NULL,
+                    fecha DATE,
+                    FOREIGN KEY (idEstudiante) REFERENCES estudiante(id) ON DELETE CASCADE
+                )
+            `;
+            await dbExport.pool.query(createTableSQL);
+            console.log('✅ Tabla nota_detalle lista');
+        } catch (err) {
+            console.error('Error creando tabla nota_detalle:', err.message);
+            // Continuar aunque falle, la tabla podría ya existir
+        }
+    };
+
+    await ensureNotaDetalleTable();
     await ensureAdmin();
 
     console.log("Servidor backend corriendo en http://localhost:3000");

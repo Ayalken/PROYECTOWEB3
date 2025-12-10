@@ -153,3 +153,14 @@ export const permitirRol = (roles) => {
         next();
     };
 };
+
+// Obtener lista de usuarios (solo para admin)
+export const obtenerUsuarios = async (req, res) => {
+    try {
+        const db = (await import("../config/db.js")).default.pool;
+        const [usuarios] = await db.query("SELECT id, nombre_usuario, rol, activo FROM usuario ORDER BY nombre_usuario");
+        res.json(usuarios);
+    } catch (err) {
+        res.status(500).json({ mensaje: "Error al obtener usuarios", error: err.message });
+    }
+};

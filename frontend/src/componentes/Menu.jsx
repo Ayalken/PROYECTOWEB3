@@ -17,8 +17,16 @@ const Menu = ({ onLogout, userRole }) => {
                 <Link to="/notas">📝 Registro de Notas</Link>
             )}
 
+            {isDocente && (
+                <Link to="/asistencia">✅ Registro de Asistencia</Link>
+            )}
+
             {isAdmin && (
-                <Link to="/docentes">👤 Gestión Docentes (WIP)</Link>
+                <Link to="/gestion-docentes">👨‍🏫 Gestión de Docentes</Link>
+            )}
+
+            {isAdmin && (
+                <Link to="/gestion-usuarios">👥 Gestión de Usuarios</Link>
             )}
 
             <div style={{ marginTop: 'auto' }}>
