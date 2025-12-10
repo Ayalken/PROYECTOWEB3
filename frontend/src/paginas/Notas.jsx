@@ -52,44 +52,53 @@ const Notas = () => {
                         });
 
                         if (response.data && Array.isArray(response.data)) {
-                            // Agrupar notas por tipo y mantener orden mediante descripciones definidas
+                            // Agrupar notas por tipo y conservar el id y descripción
                             const notasPorTipo = { tareas: [], proyectos: [], examenes: [] };
 
                             response.data.forEach(nota => {
+                                const item = { id: nota.id, descripcion: nota.descripcion, nota: Number(nota.nota) };
                                 if (nota.tipo === 'tarea') {
-                                    notasPorTipo.tareas.push({ descripcion: nota.descripcion, nota: nota.nota });
+                                    notasPorTipo.tareas.push(item);
                                 } else if (nota.tipo === 'proyecto') {
-                                    notasPorTipo.proyectos.push({ descripcion: nota.descripcion, nota: nota.nota });
+                                    notasPorTipo.proyectos.push(item);
                                 } else if (nota.tipo === 'examen') {
-                                    notasPorTipo.examenes.push({ descripcion: nota.descripcion, nota: nota.nota });
+                                    notasPorTipo.examenes.push(item);
                                 }
                             });
 
-                            // Convertir a arrays numéricos alineados con las subcolumnas actuales
-                            const tareasNums = tareas.map(t => {
+                            // Alinear con las subcolumnas actuales (por descripción)
+                            const tareasObjs = tareas.map(t => {
                                 const found = notasPorTipo.tareas.find(n => n.descripcion === t);
-                                return found ? Number(found.nota) : 0;
+                                return found ? { id: found.id, descripcion: t, nota: found.nota } : { id: null, descripcion: t, nota: 0 };
                             });
-                            const proyectosNums = proyectos.map(p => {
+                            const proyectosObjs = proyectos.map(p => {
                                 const found = notasPorTipo.proyectos.find(n => n.descripcion === p);
-                                return found ? Number(found.nota) : 0;
+                                return found ? { id: found.id, descripcion: p, nota: found.nota } : { id: null, descripcion: p, nota: 0 };
                             });
-                            const examenesNums = examenes.map(ex => {
+                            const examenesObjs = examenes.map(ex => {
                                 const found = notasPorTipo.examenes.find(n => n.descripcion === ex);
-                                return found ? Number(found.nota) : 0;
+                                return found ? { id: found.id, descripcion: ex, nota: found.nota } : { id: null, descripcion: ex, nota: 0 };
                             });
 
                             notasData[estudiante.id] = {
-                                tareas: tareasNums,
-                                proyectos: proyectosNums,
-                                examenes: examenesNums
+                                tareas: tareasObjs,
+                                proyectos: proyectosObjs,
+                                examenes: examenesObjs
                             };
                         } else {
-                            notasData[estudiante.id] = { tareas: Array(tareas.length).fill(0), proyectos: Array(proyectos.length).fill(0), examenes: Array(examenes.length).fill(0) };
+                            notasData[estudiante.id] = {
+                                tareas: tareas.map(t => ({ id: null, descripcion: t, nota: 0 })),
+                                proyectos: proyectos.map(p => ({ id: null, descripcion: p, nota: 0 })),
+                                examenes: examenes.map(ex => ({ id: null, descripcion: ex, nota: 0 }))
+                            };
                         }
                     } catch (error) {
                         // Estudiante sin notas aún
-                        notasData[estudiante.id] = { tareas: Array(tareas.length).fill(0), proyectos: Array(proyectos.length).fill(0), examenes: Array(examenes.length).fill(0) };
+                        notasData[estudiante.id] = {
+                            tareas: tareas.map(t => ({ id: null, descripcion: t, nota: 0 })),
+                            proyectos: proyectos.map(p => ({ id: null, descripcion: p, nota: 0 })),
+                            examenes: examenes.map(ex => ({ id: null, descripcion: ex, nota: 0 }))
+                        };
                     }
                 }
 
@@ -102,15 +111,123 @@ const Notas = () => {
         };
 
         fetchNotas();
-    }, [areaSeleccionada, trimestre, estudiantes]);
+    }, [areaSeleccionada, trimestre, estudiantes, tareas.length, proyectos.length, examenes.length]);
 
     // Funciones para agregar/eliminar subcolumnas
-    const agregarTarea = () => setTareas([...tareas, `Tarea ${tareas.length + 1}`]);
-    const eliminarTarea = (idx) => setTareas(tareas.filter((_, i) => i !== idx));
-    const agregarProyecto = () => setProyectos([...proyectos, `Proyecto ${proyectos.length + 1}`]);
-    const eliminarProyecto = (idx) => setProyectos(proyectos.filter((_, i) => i !== idx));
-    const agregarExamen = () => setExamenes([...examenes, `Examen ${examenes.length + 1}`]);
-    const eliminarExamen = (idx) => setExamenes(examenes.filter((_, i) => i !== idx));
+    const agregarTarea = () => {
+        const newName = `Tarea ${tareas.length + 1}`;
+        setTareasActuales(prev => {
+            const next = [...prev, newName];
+            // Añadir campo para cada estudiante en el estado de notas
+            setNotasPorEstudiante(prevNotas => {
+                const copy = { ...prevNotas };
+                estudiantes.forEach(s => {
+                    if (!copy[s.id]) {
+                        copy[s.id] = { tareas: [], proyectos: [], examenes: [] };
+                    }
+                    const cur = copy[s.id];
+                    copy[s.id] = { ...cur, tareas: [...(cur.tareas || []), { id: null, descripcion: newName, nota: 0 }] };
+                });
+                return copy;
+            });
+            return next;
+        });
+    };
+
+    const eliminarTarea = async (idx) => {
+        const desc = tareas[idx];
+        // eliminar en backend si existe id
+        for (const s of estudiantes) {
+            const item = (notasPorEstudiante[s.id]?.tareas || [])[idx];
+            if (item && item.id) {
+                try {
+                    await api.delete(`/notas-detalle/${item.id}`);
+                } catch (err) {
+                    console.warn('No se pudo eliminar nota detalle', err?.message || err);
+                }
+            }
+        }
+        // actualizar estado local
+        setNotasPorEstudiante(prev => {
+            const copy = { ...prev };
+            Object.keys(copy).forEach(k => {
+                const list = copy[k];
+                copy[k] = { ...list, tareas: (list.tareas || []).filter((_, i) => i !== idx) };
+            });
+            return copy;
+        });
+        setTareasActuales(prev => prev.filter((_, i) => i !== idx));
+    };
+
+    const agregarProyecto = () => {
+        const newName = `Proyecto ${proyectos.length + 1}`;
+        setProyectosActuales(prev => {
+            const next = [...prev, newName];
+            setNotasPorEstudiante(prevNotas => {
+                const copy = { ...prevNotas };
+                estudiantes.forEach(s => {
+                    if (!copy[s.id]) copy[s.id] = { tareas: [], proyectos: [], examenes: [] };
+                    const cur = copy[s.id];
+                    copy[s.id] = { ...cur, proyectos: [...(cur.proyectos || []), { id: null, descripcion: newName, nota: 0 }] };
+                });
+                return copy;
+            });
+            return next;
+        });
+    };
+
+    const eliminarProyecto = async (idx) => {
+        for (const s of estudiantes) {
+            const item = (notasPorEstudiante[s.id]?.proyectos || [])[idx];
+            if (item && item.id) {
+                try { await api.delete(`/notas-detalle/${item.id}`); } catch (err) { console.warn(err); }
+            }
+        }
+        setNotasPorEstudiante(prev => {
+            const copy = { ...prev };
+            Object.keys(copy).forEach(k => {
+                const list = copy[k];
+                copy[k] = { ...list, proyectos: (list.proyectos || []).filter((_, i) => i !== idx) };
+            });
+            return copy;
+        });
+        setProyectosActuales(prev => prev.filter((_, i) => i !== idx));
+    };
+
+    const agregarExamen = () => {
+        const newName = `Examen ${examenes.length + 1}`;
+        setExamenesActuales(prev => {
+            const next = [...prev, newName];
+            setNotasPorEstudiante(prevNotas => {
+                const copy = { ...prevNotas };
+                estudiantes.forEach(s => {
+                    if (!copy[s.id]) copy[s.id] = { tareas: [], proyectos: [], examenes: [] };
+                    const cur = copy[s.id];
+                    copy[s.id] = { ...cur, examenes: [...(cur.examenes || []), { id: null, descripcion: newName, nota: 0 }] };
+                });
+                return copy;
+            });
+            return next;
+        });
+    };
+
+    const eliminarExamen = async (idx) => {
+        for (const s of estudiantes) {
+            const item = (notasPorEstudiante[s.id]?.examenes || [])[idx];
+            if (item && item.id) {
+                try { await api.delete(`/notas-detalle/${item.id}`); } catch (err) { console.warn(err); }
+            }
+        }
+        setNotasPorEstudiante(prev => {
+            const copy = { ...prev };
+            Object.keys(copy).forEach(k => {
+                const list = copy[k];
+                copy[k] = { ...list, examenes: (list.examenes || []).filter((_, i) => i !== idx) };
+            });
+            return copy;
+        });
+        setExamenesActuales(prev => prev.filter((_, i) => i !== idx));
+    };
 
     // Obtener nota por descripción
     const obtenerNota = (idEstudiante, tipo, descripcion) => {
@@ -144,25 +261,25 @@ const Notas = () => {
         const notasData = { ...notasPorEstudiante };
         if (!notasData[idEstudiante]) {
             notasData[idEstudiante] = {
-                tareas: Array(tareas.length).fill(0),
-                proyectos: Array(proyectos.length).fill(0),
-                examenes: Array(examenes.length).fill(0)
+                tareas: tareas.map(t => ({ id: null, descripcion: t, nota: 0 })),
+                proyectos: proyectos.map(p => ({ id: null, descripcion: p, nota: 0 })),
+                examenes: examenes.map(ex => ({ id: null, descripcion: ex, nota: 0 }))
             };
         }
 
         const val = value === '' ? 0 : Number(value);
 
         if (tipoGrupo === 'tareas') {
-            const arr = Array.from(notasData[idEstudiante].tareas || Array(tareas.length).fill(0));
-            arr[idx] = val;
+            const arr = Array.from(notasData[idEstudiante].tareas || tareas.map(t => ({ id: null, descripcion: t, nota: 0 })));
+            arr[idx] = { ...arr[idx], nota: val };
             notasData[idEstudiante].tareas = arr;
         } else if (tipoGrupo === 'proyectos') {
-            const arr = Array.from(notasData[idEstudiante].proyectos || Array(proyectos.length).fill(0));
-            arr[idx] = val;
+            const arr = Array.from(notasData[idEstudiante].proyectos || proyectos.map(p => ({ id: null, descripcion: p, nota: 0 })));
+            arr[idx] = { ...arr[idx], nota: val };
             notasData[idEstudiante].proyectos = arr;
         } else if (tipoGrupo === 'examenes') {
-            const arr = Array.from(notasData[idEstudiante].examenes || Array(examenes.length).fill(0));
-            arr[idx] = val;
+            const arr = Array.from(notasData[idEstudiante].examenes || examenes.map(ex => ({ id: null, descripcion: ex, nota: 0 })));
+            arr[idx] = { ...arr[idx], nota: val };
             notasData[idEstudiante].examenes = arr;
         }
 
@@ -172,8 +289,10 @@ const Notas = () => {
     // Calcular promedios
     const promedioGrupo = (arr) => {
         if (!arr || arr.length === 0) return 0;
-        const sum = arr.reduce((a, b) => a + (parseFloat(b) || 0), 0);
-        return arr.length ? sum / arr.length : 0;
+        // arr puede ser array de números o array de objetos {nota}
+        const valores = arr.map(x => (typeof x === 'number' ? x : (x?.nota || 0)));
+        const sum = valores.reduce((a, b) => a + (parseFloat(b) || 0), 0);
+        return valores.length ? sum / valores.length : 0;
     };
 
     // Guardar nota
@@ -186,50 +305,87 @@ const Notas = () => {
             const registrosAGuardar = [];
 
             if (notaData.tareas && Array.isArray(notaData.tareas)) {
-                notaData.tareas.forEach((nota, idx) => {
-                    if (nota) {
+                notaData.tareas.forEach((item) => {
+                    if (item) {
                         registrosAGuardar.push({
+                            id: item.id,
                             idEstudiante,
                             semestre: trimestre,
                             tipo: 'tarea',
-                            descripcion: tareas[idx],
-                            nota: nota
+                            descripcion: item.descripcion,
+                            nota: item.nota
                         });
                     }
                 });
             }
 
             if (notaData.proyectos && Array.isArray(notaData.proyectos)) {
-                notaData.proyectos.forEach((nota, idx) => {
-                    if (nota) {
+                notaData.proyectos.forEach((item) => {
+                    if (item) {
                         registrosAGuardar.push({
+                            id: item.id,
                             idEstudiante,
                             semestre: trimestre,
                             tipo: 'proyecto',
-                            descripcion: proyectos[idx],
-                            nota: nota
+                            descripcion: item.descripcion,
+                            nota: item.nota
                         });
                     }
                 });
             }
 
             if (notaData.examenes && Array.isArray(notaData.examenes)) {
-                notaData.examenes.forEach((nota, idx) => {
-                    if (nota) {
+                notaData.examenes.forEach((item) => {
+                    if (item) {
                         registrosAGuardar.push({
+                            id: item.id,
                             idEstudiante,
                             semestre: trimestre,
                             tipo: 'examen',
-                            descripcion: examenes[idx],
-                            nota: nota
+                            descripcion: item.descripcion,
+                            nota: item.nota
                         });
                     }
                 });
             }
 
-            // Guardar todos los registros
+            // Guardar/actualizar todos los registros
             for (const registro of registrosAGuardar) {
-                await api.post('/notas-detalle', registro);
+                if (registro.id) {
+                    // actualizar
+                    await api.put(`/notas-detalle/${registro.id}`, { nota: registro.nota, descripcion: registro.descripcion });
+                } else {
+                    // crear
+                    const res = await api.post('/notas-detalle', {
+                        idEstudiante: registro.idEstudiante,
+                        semestre: registro.semestre,
+                        tipo: registro.tipo,
+                        descripcion: registro.descripcion,
+                        nota: registro.nota
+                    });
+                    // actualizar el id en el estado si el backend devuelve insertId
+                    const insertId = res.data?.insertId || res.data?.id || null;
+                    if (insertId) {
+                        // buscar y asignar id en notasPorEstudiante
+                        setNotasPorEstudiante(prev => {
+                            const copy = { ...prev };
+                            const list = copy[idEstudiante];
+                            if (list) {
+                                ['tareas', 'proyectos', 'examenes'].forEach(group => {
+                                    if (Array.isArray(list[group])) {
+                                        for (let i = 0; i < list[group].length; i++) {
+                                            if (!list[group][i].id && list[group][i].descripcion === registro.descripcion) {
+                                                list[group][i] = { ...list[group][i], id: insertId };
+                                                break;
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                            return copy;
+                        });
+                    }
+                }
             }
 
             setMessage(`✅ Notas de ${estudiantes.find(e => e.id === idEstudiante)?.apellidos_nombres} guardadas con éxito.`);
@@ -314,10 +470,14 @@ const Notas = () => {
                 </thead>
                 <tbody>
                     {estudiantes.map((e, index) => {
-                        const currentNota = notasPorEstudiante[e.id] || { tareas: Array(tareas.length).fill(0), proyectos: Array(proyectos.length).fill(0), examenes: Array(examenes.length).fill(0) };
-                        const arrTareas = currentNota.tareas || Array(tareas.length).fill(0);
-                        const arrProyectos = currentNota.proyectos || Array(proyectos.length).fill(0);
-                        const arrExamenes = currentNota.examenes || Array(examenes.length).fill(0);
+                        const currentNota = notasPorEstudiante[e.id] || {
+                            tareas: tareas.map(t => ({ id: null, descripcion: t, nota: 0 })),
+                            proyectos: proyectos.map(p => ({ id: null, descripcion: p, nota: 0 })),
+                            examenes: examenes.map(ex => ({ id: null, descripcion: ex, nota: 0 }))
+                        };
+                        const arrTareas = currentNota.tareas || tareas.map(t => ({ id: null, descripcion: t, nota: 0 }));
+                        const arrProyectos = currentNota.proyectos || proyectos.map(p => ({ id: null, descripcion: p, nota: 0 }));
+                        const arrExamenes = currentNota.examenes || examenes.map(ex => ({ id: null, descripcion: ex, nota: 0 }));
 
                         const promTareas = promedioGrupo(arrTareas);
                         const promProyectos = promedioGrupo(arrProyectos);
@@ -331,7 +491,7 @@ const Notas = () => {
                                 {tareas.map((_, idx) => (
                                     <td key={`t-${idx}`}>
                                         <input type="number" className="table-input" min="0" max="100"
-                                            value={arrTareas[idx] || ''}
+                                            value={arrTareas[idx]?.nota ?? ''}
                                             onChange={ev => handleNotaDinamica(e.id, 'tareas', idx, ev.target.value)}
                                         />
                                     </td>
@@ -339,7 +499,7 @@ const Notas = () => {
                                 {proyectos.map((_, idx) => (
                                     <td key={`p-${idx}`}>
                                         <input type="number" className="table-input" min="0" max="100"
-                                            value={arrProyectos[idx] || ''}
+                                            value={arrProyectos[idx]?.nota ?? ''}
                                             onChange={ev => handleNotaDinamica(e.id, 'proyectos', idx, ev.target.value)}
                                         />
                                     </td>
@@ -347,7 +507,7 @@ const Notas = () => {
                                 {examenes.map((_, idx) => (
                                     <td key={`e-${idx}`}>
                                         <input type="number" className="table-input" min="0" max="100"
-                                            value={arrExamenes[idx] || ''}
+                                            value={arrExamenes[idx]?.nota ?? ''}
                                             onChange={ev => handleNotaDinamica(e.id, 'examenes', idx, ev.target.value)}
                                         />
                                     </td>
