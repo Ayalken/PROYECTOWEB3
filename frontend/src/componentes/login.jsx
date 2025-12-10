@@ -28,16 +28,45 @@ const Login = ({ onLogin }) => {
     };
 
     return (
-        <div className="content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <div style={{ width: '400px' }}>
-                <h2>🔐 Registro Pedagógico Web</h2>
-                <form onSubmit={handleSubmit} style={{ gridTemplateColumns: '1fr' }}>
+        <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '100vh',
+            width: '100%',
+            backgroundColor: '#f8f9fa'
+        }}>
+            <div style={{
+                width: '400px',
+                backgroundColor: 'white',
+                padding: '40px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                textAlign: 'center'
+            }}>
+                <h2 style={{
+                    color: '#212529',
+                    marginBottom: '30px',
+                    fontSize: '24px'
+                }}>🔐 Registro Pedagógico Web</h2>
+                <form onSubmit={handleSubmit} style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr',
+                    gap: '15px',
+                    padding: '0'
+                }}>
                     <input
                         type="text"
                         name="nombre_usuario"
                         placeholder="Usuario"
                         onChange={handleChange}
                         required
+                        style={{
+                            padding: '12px',
+                            border: '1px solid #ced4da',
+                            borderRadius: '4px',
+                            fontSize: '14px'
+                        }}
                     />
                     <input
                         type="password"
@@ -45,10 +74,30 @@ const Login = ({ onLogin }) => {
                         placeholder="Contraseña"
                         onChange={handleChange}
                         required
+                        style={{
+                            padding: '12px',
+                            border: '1px solid #ced4da',
+                            borderRadius: '4px',
+                            fontSize: '14px'
+                        }}
                     />
 
-                    {error && <p className="error-message">{error}</p>}
-                    <button type="submit" disabled={loading}>
+                    {error && <p style={{
+                        color: '#dc3545',
+                        marginTop: '10px',
+                        fontSize: '13px'
+                    }}>{error}</p>}
+                    <button type="submit" disabled={loading} style={{
+                        padding: '12px',
+                        backgroundColor: '#007bff',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        marginTop: '10px'
+                    }}>
                         {loading ? 'Iniciando...' : 'Ingresar'}
                     </button>
                 </form>
