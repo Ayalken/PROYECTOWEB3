@@ -22,3 +22,9 @@ export const eliminaLogicoEstudiante = async (id) => {
     await db.query("UPDATE estudiante SET activo = 0 WHERE id = ?", [id]);
     return id;
 };
+
+// Asignar un docente a todos los estudiantes de un curso determinado (activo)
+export const asignarDocentePorCurso = async (idDocente, curso) => {
+    const [resultado] = await db.query("UPDATE estudiante SET docente_id = ? WHERE curso = ? AND activo = 1", [idDocente, curso]);
+    return resultado;
+};

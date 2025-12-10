@@ -3,7 +3,7 @@ import { getEstudiantes, createEstudiante, updateEstudiante, deleteEstudiante } 
 import { getUserRole } from '../api/auth';
 
 const initialFormData = {
-    apellidos_nombres: '', carnet_identidad: '', expedido: '',
+    apellido_paterno: '', apellido_materno: '', nombres: '', carnet_identidad: '', expedido: '',
     fecha_nac_dia: '', fecha_nac_mes: '', fecha_nac_anio: '',
     sexo: 'M', desviado_procedencia: '',
     apellidos_nombres_tutor: '', ci_tutor: '', ocupacion_tutor: '',
@@ -37,11 +37,29 @@ const Estudiantes = () => {
 
     const handleEdit = (estudiante) => {
         setEditingId(estudiante.id);
+        // Intentar descomponer apellidos_nombres en paterno/materno/nombres
+        const parts = (estudiante.apellidos_nombres || '').trim().split(/\s+/);
+        const apellido_paterno = parts[0] || '';
+        const apellido_materno = parts[1] || '';
+        const nombres = parts.length > 2 ? parts.slice(2).join(' ') : '';
+
         setFormData({
-            ...estudiante,
+            ...initialFormData,
+            apellido_paterno,
+            apellido_materno,
+            nombres,
+            carnet_identidad: estudiante.carnet_identidad || '',
+            expedido: estudiante.expedido || '',
             fecha_nac_dia: estudiante.fecha_nac_dia || '',
             fecha_nac_mes: estudiante.fecha_nac_mes || '',
             fecha_nac_anio: estudiante.fecha_nac_anio || '',
+            desviado_procedencia: estudiante.desviado_procedencia || '',
+            apellidos_nombres_tutor: estudiante.apellidos_nombres_tutor || '',
+            ci_tutor: estudiante.ci_tutor || '',
+            telefono_celular_tutor: estudiante.telefono_celular_tutor || '',
+            domicilio: estudiante.domicilio || '',
+            unidad_educativa: estudiante.unidad_educativa || 'U.E. CALAMA',
+            curso: estudiante.curso || '5 "B"'
         });
         setMessage('');
     };
@@ -95,7 +113,9 @@ const Estudiantes = () => {
                 </h3>
 
                 {/* CAMPOS DEL ESTUDIANTE */}
-                <input type="text" name="apellidos_nombres" placeholder="Apellidos y Nombres" value={formData.apellidos_nombres} onChange={handleChange} required />
+                <input type="text" name="apellido_paterno" placeholder="Apellido Paterno" value={formData.apellido_paterno} onChange={handleChange} required />
+                <input type="text" name="apellido_materno" placeholder="Apellido Materno" value={formData.apellido_materno} onChange={handleChange} required />
+                <input type="text" name="nombres" placeholder="Nombres" value={formData.nombres} onChange={handleChange} required />
                 <input type="text" name="carnet_identidad" placeholder="CI" value={formData.carnet_identidad} onChange={handleChange} required />
                 <select name="expedido" value={formData.expedido} onChange={handleChange}>
                     <option value="">Expedido</option><option value="LP">LP</option><option value="SC">SC</option><option value="CB">CB</option>
@@ -130,7 +150,9 @@ const Estudiantes = () => {
                 <thead>
                     <tr>
                         <th>N°</th>
-                        <th style={{ minWidth: '200px' }}>Apellidos y Nombres</th>
+                        <th>Apellido Paterno</th>
+                        <th>Apellido Materno</th>
+                        <th>Nombres</th>
                         <th>CI</th>
                         <th>F. Nac.</th>
                         <th>Tutor</th>
@@ -142,7 +164,9 @@ const Estudiantes = () => {
                     {estudiantes.map((e, index) => (
                         <tr key={e.id}>
                             <td>{index + 1}</td>
-                            <td>{e.apellidos_nombres}</td>
+                            <td>{e.apellido_paterno || (e.apellidos_nombres ? e.apellidos_nombres.split(' ')[0] : '')}</td>
+                            <td>{e.apellido_materno || (e.apellidos_nombres ? (e.apellidos_nombres.split(' ')[1] || '') : '')}</td>
+                            <td>{e.nombres || (e.apellidos_nombres ? e.apellidos_nombres.split(' ').slice(2).join(' ') : '')}</td>
                             <td>{e.carnet_identidad}</td>
                             <td>{`${e.fecha_nac_dia || '00'}/${e.fecha_nac_mes || '00'}/${e.fecha_nac_anio || '0000'}`}</td>
                             <td>{e.apellidos_nombres_tutor}</td>

@@ -4,10 +4,15 @@ import { api } from '../api/index';
 const GestionDocentes = () => {
     const [docentes, setDocentes] = useState([]);
     const [formData, setFormData] = useState({
-        apellidos_nombres: '',
+        apellido_paterno: '',
+        apellido_materno: '',
+        nombres: '',
         ci: '',
-        telefono: ''
+        telefono: '',
+        materia: '',
+        curso_asignado: ''
     });
+    const AREAS = ['LENGUAJE', 'MATEMÁTICAS', 'CIENCIAS SOCIALES', 'CIENCIAS NATURALES', 'ARTES PLASTICAS Y VISUALES'];
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [showForm, setShowForm] = useState(false);
@@ -30,8 +35,12 @@ const GestionDocentes = () => {
     };
 
     const validarDatos = (data) => {
-        if (!data.apellidos_nombres || data.apellidos_nombres.length < 5) {
-            return "Nombre y apellido requerido (mínimo 5 caracteres)";
+        if (data.apellido_paterno || data.apellido_materno || data.nombres) {
+            if (!data.apellido_paterno || !data.apellido_materno || !data.nombres) {
+                return "Apellido paterno, apellido materno y nombres son obligatorios";
+            }
+        } else {
+            return "Debe ingresar apellido paterno, apellido materno y nombres";
         }
         if (!data.ci) {
             return "Carnet de identidad requerido";
@@ -73,14 +82,21 @@ const GestionDocentes = () => {
     };
 
     const resetForm = () => {
-        setFormData({ apellidos_nombres: '', ci: '', telefono: '' });
+        setFormData({ apellido_paterno: '', apellido_materno: '', nombres: '', ci: '', telefono: '' });
         setShowForm(false);
         setEditando(null);
     };
 
     const handleEditar = (docente) => {
+        const parts = (docente.apellidos_nombres || '').trim().split(/\s+/);
+        const apellido_paterno = parts[0] || '';
+        const apellido_materno = parts[1] || '';
+        const nombres = parts.length > 2 ? parts.slice(2).join(' ') : '';
+
         setFormData({
-            apellidos_nombres: docente.apellidos_nombres,
+            apellido_paterno,
+            apellido_materno,
+            nombres,
             ci: docente.ci,
             telefono: docente.telefono || ''
         });
@@ -114,15 +130,12 @@ const GestionDocentes = () => {
                 <form onSubmit={handleSubmit} style={{ marginBottom: '30px', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
                     <h3>{editando ? 'Editar Docente' : 'Agregar Nuevo Docente'}</h3>
 
-                    <label>Nombre y Apellido:</label>
-                    <input
-                        type="text"
-                        name="apellidos_nombres"
-                        value={formData.apellidos_nombres}
-                        onChange={handleChange}
-                        placeholder="ej: Juan Carlos Pérez García"
-                        required
-                    />
+                    <label>Apellido Paterno:</label>
+                    <input type="text" name="apellido_paterno" value={formData.apellido_paterno} onChange={handleChange} placeholder="ej: Pérez" required />
+                    <label>Apellido Materno:</label>
+                    <input type="text" name="apellido_materno" value={formData.apellido_materno} onChange={handleChange} placeholder="ej: García" required />
+                    <label>Nombres:</label>
+                    <input type="text" name="nombres" value={formData.nombres} onChange={handleChange} placeholder="ej: Juan Carlos" required />
 
                     <label>Carnet de Identidad:</label>
                     <input
@@ -143,6 +156,15 @@ const GestionDocentes = () => {
                         placeholder="ej: +591 76543210"
                     />
 
+                    <label>Materia asignada (opcional):</label>
+                    <select name="materia" value={formData.materia} onChange={handleChange}>
+                        <option value="">-- Seleccionar materia --</option>
+                        {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+                    </select>
+
+                    <label>Curso asignado (opcional):</label>
+                    <input type="text" name="curso_asignado" value={formData.curso_asignado} onChange={handleChange} placeholder={'ej: 5 "B"'} />
+
                     {message && <p className={message.includes('✅') ? 'success-message' : 'error-message'}>{message}</p>}
 
                     <button type="submit" disabled={loading}>
@@ -158,7 +180,9 @@ const GestionDocentes = () => {
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Nombre y Apellido</th>
+                            <th>Apellido Paterno</th>
+                            <th>Apellido Materno</th>
+                            <th>Nombres</th>
                             <th>Carnet</th>
                             <th>Teléfono</th>
                             <th>Estado</th>
@@ -169,7 +193,9 @@ const GestionDocentes = () => {
                         {docentes.map((docente) => (
                             <tr key={docente.id}>
                                 <td>{docente.id}</td>
-                                <td>{docente.apellidos_nombres}</td>
+                                <td>{docente.apellido_paterno || (docente.apellidos_nombres ? docente.apellidos_nombres.split(' ')[0] : '')}</td>
+                                <td>{docente.apellido_materno || (docente.apellidos_nombres ? (docente.apellidos_nombres.split(' ')[1] || '') : '')}</td>
+                                <td>{docente.nombres || (docente.apellidos_nombres ? docente.apellidos_nombres.split(' ').slice(2).join(' ') : '')}</td>
                                 <td>{docente.ci}</td>
                                 <td>{docente.telefono || '-'}</td>
                                 <td>{docente.activo ? '✅ Activo' : '❌ Inactivo'}</td>
