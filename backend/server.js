@@ -96,3 +96,25 @@ app.listen(3000, async () => {
 
     console.log("Servidor backend corriendo en http://localhost:3000");
 });
+
+// Middleware global para capturar errores no manejados en rutas
+app.use((err, req, res, next) => {
+    try {
+        const timestamp = new Date().toISOString();
+        const route = req.originalUrl || req.url;
+        const method = req.method;
+        const ip = req.clientIp || req.ip;
+        console.error(`[${timestamp}] Error en ruta ${method} ${route} - IP: ${ip}`);
+        console.error(err && err.stack ? err.stack : err);
+        // En desarrollo devolvemos detalle; en producción mensaje genérico
+        if (process.env.NODE_ENV === 'development') {
+            res.status(500).json({ mensaje: 'Error interno del servidor', error: err.message });
+        } else {
+            res.status(500).json({ mensaje: 'Error interno del servidor' });
+        }
+    } catch (e) {
+        // Si algo falla al loggear, enviar respuesta genérica
+        console.error('Error dentro del middleware de errores:', e);
+        res.status(500).json({ mensaje: 'Error interno del servidor' });
+    }
+});

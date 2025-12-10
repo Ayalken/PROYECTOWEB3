@@ -66,7 +66,17 @@ export const registrar = async (req, res) => {
 
         res.status(201).json({ mensaje: `Usuario registrado. Fortaleza: ${fortaleza}`, rol: nuevoUsuario.rol });
     } catch (err) {
-        res.status(500).json({ mensaje: "Error al registrar el usuario" });
+        // Log con más contexto para depuración (no incluir la contraseña en texto claro)
+        const masked = { ...req.body, password: req.body.password ? '***masked***' : undefined };
+        console.error(`[${new Date().toISOString()}] Error al registrar usuario. Ruta: ${req.originalUrl} - Datos:`, masked);
+        console.error(err && err.stack ? err.stack : err);
+
+        // En desarrollo retornamos el mensaje de error para facilitar debugging; en producción mantener mensaje genérico
+        if (process.env.NODE_ENV === 'development') {
+            res.status(500).json({ mensaje: "Error al registrar el usuario", error: err.message });
+        } else {
+            res.status(500).json({ mensaje: "Error al registrar el usuario" });
+        }
     }
 };
 
