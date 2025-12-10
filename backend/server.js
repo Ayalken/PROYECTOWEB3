@@ -60,9 +60,9 @@ app.listen(3000, async () => {
                 const saltRounds = 10;
                 const password_hash = await bcrypt.hash(password, saltRounds);
                 await insertaUsuario({ nombre_usuario: 'admin', password_hash, rol: 'admin' });
-                console.log('✅ Usuario admin creado: usuario=admin contraseña=admin123!');
+                console.log(' Usuario admin creado: usuario=admin contraseña=admin123!');
             } else {
-                console.log('ℹ️ Usuario admin ya existe');
+                console.log('ℹ Usuario admin ya existe');
             }
         } catch (err) {
             console.error('Error creando usuario admin:', err);
@@ -84,7 +84,7 @@ app.listen(3000, async () => {
                 )
             `;
             await dbExport.pool.query(createTableSQL);
-            console.log('✅ Tabla nota_detalle lista');
+            console.log('Tabla nota_detalle lista');
         } catch (err) {
             console.error('Error creando tabla nota_detalle:', err.message);
             // Continuar aunque falle, la tabla podría ya existir
