@@ -2,12 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api/index';
 import { getEstudiantes } from '../api/estudiantes';
 
-const AREAS = ['LENGUAJE', 'MATEMÁTICAS', 'CIENCIAS SOCIALES', 'CIENCIAS NATURALES', 'ARTES PLASTICAS Y VISUALES'];
-
 const Notas = () => {
     const [estudiantes, setEstudiantes] = useState([]);
     const [notasPorEstudiante, setNotasPorEstudiante] = useState({});
-    const [areaSeleccionada, setAreaSeleccionada] = useState(AREAS[0]);
+    const [materias, setMaterias] = useState([]);
+    const [materiaSeleccionada, setMateriaSeleccionada] = useState(null);
     const [trimestre, setTrimestre] = useState(1);
     const [message, setMessage] = useState('');
     const [cargando, setCargando] = useState(false);
@@ -35,11 +34,28 @@ const Notas = () => {
         fetchEstudiantes();
     }, []);
 
+    // Cargar materias disponibles
+    useEffect(() => {
+        const fetchMaterias = async () => {
+            try {
+                const res = await api.get('/materias');
+                setMaterias(res.data || []);
+                if ((res.data || []).length > 0 && materiaSeleccionada === null) {
+                    setMateriaSeleccionada(res.data[0].id);
+                }
+            } catch (err) {
+                console.warn('No se pudieron cargar materias', err);
+            }
+        };
+        fetchMaterias();
+    }, []);
+
     // Cargar notas cuando cambia área o trimestre
     useEffect(() => {
         const fetchNotas = async () => {
             if (estudiantes.length === 0) return;
-
+            if (!materiaSeleccionada) return; // no cargamos si no hay materia seleccionada
+            // Al cambiar materia, iniciamos con vista limpia y cargamos solo notas de esa materia
             setCargando(true);
             try {
                 const notasData = {};
@@ -48,7 +64,7 @@ const Notas = () => {
                 for (const estudiante of estudiantes) {
                     try {
                         const response = await api.get('/notas-detalle', {
-                            params: { idEstudiante: estudiante.id, semestre: trimestre }
+                            params: { idEstudiante: estudiante.id, semestre: trimestre, materia_id: materiaSeleccionada }
                         });
 
                         if (response.data && Array.isArray(response.data)) {
@@ -111,7 +127,7 @@ const Notas = () => {
         };
 
         fetchNotas();
-    }, [areaSeleccionada, trimestre, estudiantes, tareas.length, proyectos.length, examenes.length]);
+    }, [areaSeleccionada, trimestre, estudiantes, tareas.length, proyectos.length, examenes.length, materiaSeleccionada]);
 
     // Funciones para agregar/eliminar subcolumnas
     const agregarTarea = () => {
@@ -361,7 +377,8 @@ const Notas = () => {
                         semestre: registro.semestre,
                         tipo: registro.tipo,
                         descripcion: registro.descripcion,
-                        nota: registro.nota
+                        nota: registro.nota,
+                        materia_id: materiaSeleccionada || null
                     });
                     // actualizar el id en el estado si el backend devuelve insertId
                     const insertId = res.data?.insertId || res.data?.id || null;
@@ -399,7 +416,7 @@ const Notas = () => {
 
     return (
         <div className="container">
-            <h2>📝 Registro de Notas - {areaSeleccionada}</h2>
+            <h2>📝 Registro de Notas{materiaSeleccionada ? ` - ${materias.find(m => m.id === materiaSeleccionada)?.nombre || ''}` : ''}</h2>
             {message && <p className={message.includes('✅') ? 'success-message' : 'error-message'}>{message}</p>}
             {cargando && <p style={{ color: 'blue' }}>Cargando notas...</p>}
 
@@ -408,6 +425,11 @@ const Notas = () => {
                 <label>Área:</label>
                 <select value={areaSeleccionada} onChange={(e) => setAreaSeleccionada(e.target.value)}>
                     {AREAS.map(area => <option key={area} value={area}>{area}</option>)}
+                </select>
+                <label>Materia:</label>
+                <select value={materiaSeleccionada || ''} onChange={(e) => { setMateriaSeleccionada(e.target.value ? parseInt(e.target.value, 10) : null); setNotasPorEstudiante({}); }}>
+                    <option value="">-- Seleccionar materia --</option>
+                    {materias.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
                 </select>
                 <label>Trimestre:</label>
                 <select value={trimestre} onChange={(e) => setTrimestre(parseInt(e.target.value))}>

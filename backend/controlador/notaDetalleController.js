@@ -8,11 +8,12 @@ import {
 // Listar notas detalle por estudiante y semestre
 export const listar = async (req, res) => {
     try {
-        const { idEstudiante, semestre } = req.query;
+        const { idEstudiante, semestre, materia_id } = req.query;
         if (!idEstudiante || !semestre) {
             return res.status(400).json({ mensaje: "Faltan parámetros: idEstudiante y semestre" });
         }
-        const resultado = await obtNotasDetallePorEstudiante(idEstudiante, semestre);
+        const materiaIdNum = materia_id ? parseInt(materia_id, 10) : null;
+        const resultado = await obtNotasDetallePorEstudiante(idEstudiante, semestre, materiaIdNum);
         res.json(resultado);
     } catch (err) {
         console.error("Error al listar notas_detalle:", err);
@@ -25,7 +26,7 @@ export const crear = async (req, res) => {
     try {
         console.log("Datos recibidos en POST /notas-detalle:", req.body);
         const resultado = await insertaNotaDetalle(req.body);
-        res.json({ mensaje: "Nota registrada", resultado });
+        res.json({ mensaje: "Nota registrada", resultado, insertId: resultado.id });
     } catch (err) {
         console.error("Error al guardar nota_detalle:", err);
         res.status(500).json({ mensaje: "Error al guardar nota", error: err.message });

@@ -6,6 +6,7 @@ import camposExtraRoutes from "./rutas/camposExtraRoutes.js";
 import authRoutes from "./rutas/authRoutes.js";
 import docenteRoutes from "./rutas/docenteRoutes.js";
 import reporteRoutes from "./rutas/reporteRoutes.js";
+import materiaRoutes from "./rutas/materiaRoutes.js";
 import asistenciaRoutes from "./rutas/asistenciaRoutes.js";
 import dbExport from "./config/db.js";
 import bcrypt from "bcrypt";
@@ -29,6 +30,7 @@ app.use("/campos-extra", camposExtraRoutes);
 app.use("/reportes", reporteRoutes);
 app.use("/asistencia", asistenciaRoutes);
 app.use("/notas-detalle", notaDetalleRoutes);
+app.use("/materias", materiaRoutes);
 
 // Ruta de prueba para debuggear nota_detalle
 app.post("/test-nota", async (req, res) => {
@@ -80,6 +82,7 @@ app.listen(3000, async () => {
                     descripcion VARCHAR(100),
                     nota DECIMAL(5,2) NOT NULL,
                     fecha DATE,
+                    materia_id INT NULL,
                     FOREIGN KEY (idEstudiante) REFERENCES estudiante(id) ON DELETE CASCADE
                 )
             `;
@@ -93,6 +96,31 @@ app.listen(3000, async () => {
 
     await ensureNotaDetalleTable();
     await ensureAdmin();
+
+    const ensureMateriasTable = async () => {
+        try {
+            const createSQL = `
+                CREATE TABLE IF NOT EXISTS materias (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    nombre VARCHAR(150) NOT NULL UNIQUE,
+                    descripcion TEXT,
+                    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `;
+            await dbExport.pool.query(createSQL);
+            // intentar añadir columna materia_id a nota_detalle si no existe
+            try {
+                await dbExport.pool.query("ALTER TABLE nota_detalle ADD COLUMN IF NOT EXISTS materia_id INT NULL");
+            } catch (err) {
+                // ALTER TABLE con IF NOT EXISTS no es soportado en algunas versiones; ignorar
+            }
+            console.log('✅ Tabla materias lista');
+        } catch (err) {
+            console.error('Error creando tabla materias:', err.message);
+        }
+    };
+
+    await ensureMateriasTable();
 
     console.log("Servidor backend corriendo en http://localhost:3000");
 });
