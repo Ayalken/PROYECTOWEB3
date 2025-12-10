@@ -9,3 +9,5 @@ export const createEstudiante = (data) => api.post(ESTUDIANTE_URL, data);
 export const updateEstudiante = (id, data) => api.put(`${ESTUDIANTE_URL}/${id}`, data);
 
 export const deleteEstudiante = (id) => api.delete(`${ESTUDIANTE_URL}/${id}`);
+
+export const checkCI = (ci) => api.get(`${ESTUDIANTE_URL}/check-ci/${ci}`);

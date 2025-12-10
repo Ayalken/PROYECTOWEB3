@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getEstudiantes, createEstudiante, updateEstudiante, deleteEstudiante } from '../api/estudiantes';
+import { getEstudiantes, createEstudiante, updateEstudiante, deleteEstudiante, checkCI } from '../api/estudiantes';
+import { useRef } from 'react';
 import { getUserRole } from '../api/auth';
 
 const initialFormData = {
@@ -16,6 +17,7 @@ const Estudiantes = () => {
     const [formData, setFormData] = useState(initialFormData);
     const [editingId, setEditingId] = useState(null);
     const [message, setMessage] = useState('');
+    const [fieldErrors, setFieldErrors] = useState({});
     const userRole = getUserRole();
 
     const fetchEstudiantes = async () => {
@@ -32,7 +34,93 @@ const Estudiantes = () => {
     }, []);
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
+        // Clear field error on change
+        if (fieldErrors[name]) {
+            setFieldErrors(prev => {
+                const copy = { ...prev };
+                delete copy[name];
+                return copy;
+            });
+        }
+    };
+
+    const ciCheckRef = useRef(null);
+
+    // Debounced check for CI duplicado
+    useEffect(() => {
+        const ci = formData.carnet_identidad;
+        if (ciCheckRef.current) clearTimeout(ciCheckRef.current);
+        if (!ci || ci.toString().trim() === '') {
+            // clear any ci error
+            setFieldErrors(prev => { const copy = { ...prev }; delete copy.carnet_identidad; return copy; });
+            return;
+        }
+        ciCheckRef.current = setTimeout(async () => {
+            try {
+                const res = await checkCI(ci);
+                if (res.data && res.data.exists) {
+                    setFieldErrors(prev => ({ ...prev, carnet_identidad: 'CI ya registrado en el sistema.' }));
+                } else {
+                    setFieldErrors(prev => { const copy = { ...prev }; delete copy.carnet_identidad; return copy; });
+                }
+            } catch (err) {
+                // ignore network errors for CI check
+            }
+        }, 600);
+        return () => { if (ciCheckRef.current) clearTimeout(ciCheckRef.current); };
+    }, [formData.carnet_identidad]);
+
+    const computeProgress = () => {
+        const required = ['apellido_paterno','apellido_materno','nombres','carnet_identidad'];
+        let filled = 0;
+        required.forEach(f => { if (formData[f] && String(formData[f]).trim().length>0 && !fieldErrors[f]) filled++; });
+        return Math.round((filled / required.length) * 100);
+    };
+
+    const validateForm = (data) => {
+        const errors = {};
+        // Nombre y apellidos (si se usan separados)
+        if (data.apellido_paterno || data.apellido_materno || data.nombres) {
+            if (!data.apellido_paterno) errors.apellido_paterno = 'Apellido paterno requerido.';
+            if (!data.apellido_materno) errors.apellido_materno = 'Apellido materno requerido.';
+            if (!data.nombres) errors.nombres = 'Nombres requeridos.';
+        } else {
+            if (!data.apellidos_nombres || data.apellidos_nombres.trim().length < 5) {
+                errors.apellidos_nombres = 'Apellidos y nombres obligatorios (o complete los campos separados).';
+            }
+        }
+
+        // CI: solo números y longitud razonable
+        if (!data.carnet_identidad) {
+            errors.carnet_identidad = 'CI es obligatorio.';
+        } else if (!/^[0-9]{6,12}$/.test(String(data.carnet_identidad))) {
+            errors.carnet_identidad = 'CI debe ser numérico (6-12 dígitos).';
+        }
+
+        // Fecha nacimiento: si se completa, validar rango
+        if (data.fecha_nac_anio) {
+            const anio = parseInt(data.fecha_nac_anio, 10);
+            if (isNaN(anio) || anio < 1900 || anio > new Date().getFullYear()) errors.fecha_nac_anio = 'Año inválido.';
+        }
+        if (data.fecha_nac_mes) {
+            const mes = parseInt(data.fecha_nac_mes, 10);
+            if (isNaN(mes) || mes < 1 || mes > 12) errors.fecha_nac_mes = 'Mes inválido.';
+        }
+        if (data.fecha_nac_dia) {
+            const dia = parseInt(data.fecha_nac_dia, 10);
+            if (isNaN(dia) || dia < 1 || dia > 31) errors.fecha_nac_dia = 'Día inválido.';
+        }
+
+        // Teléfono tutor (opcional) pero si está, validar formato
+        if (data.telefono_celular_tutor) {
+            if (!/^[0-9()+\-\s]{6,20}$/.test(String(data.telefono_celular_tutor))) {
+                errors.telefono_celular_tutor = 'Teléfono inválido.';
+            }
+        }
+
+        return errors;
     };
 
     const handleEdit = (estudiante) => {
@@ -66,6 +154,14 @@ const Estudiantes = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        // Validación cliente
+        const errors = validateForm(formData);
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
+            setMessage('Corrija los errores del formulario.');
+            return;
+        }
+
         try {
             if (editingId) {
                 // Actualizar
@@ -79,8 +175,10 @@ const Estudiantes = () => {
             }
             setFormData(initialFormData);
             fetchEstudiantes();
+            setFieldErrors({});
         } catch (error) {
-            setMessage(`Error al guardar: ${error.response?.data?.mensaje || 'Verifique los datos.'}`);
+            const errMsg = error.response?.data?.mensaje || error.response?.data?.error || error.message || 'Verifique los datos.';
+            setMessage(`Error al guardar: ${errMsg}`);
         }
     };
 
@@ -106,6 +204,14 @@ const Estudiantes = () => {
             <h2>📋 Cuadro de Filiación y Registro de Estudiantes (CRUD)</h2>
             {message && <p className={message.includes('Error') ? 'error-message' : 'success-message'}>{message}</p>}
 
+            {/* Progress bar */}
+            <div style={{ margin: '10px 0' }}>
+                <div style={{ background: '#e9ecef', height: '10px', borderRadius: '6px', overflow: 'hidden' }}>
+                    <div style={{ width: `${computeProgress()}%`, height: '100%', background: '#28a745', transition: 'width 200ms' }} />
+                </div>
+                <small>Progreso del formulario: {computeProgress()}%</small>
+            </div>
+
             {/* --- Formulario de Edición/Creación --- */}
             <form onSubmit={handleSubmit} style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
                 <h3 style={{ gridColumn: '1 / -1', borderBottom: '1px solid #ccc', paddingBottom: '10px' }}>
@@ -113,10 +219,54 @@ const Estudiantes = () => {
                 </h3>
 
                 {/* CAMPOS DEL ESTUDIANTE */}
-                <input type="text" name="apellido_paterno" placeholder="Apellido Paterno" value={formData.apellido_paterno} onChange={handleChange} required />
-                <input type="text" name="apellido_materno" placeholder="Apellido Materno" value={formData.apellido_materno} onChange={handleChange} required />
-                <input type="text" name="nombres" placeholder="Nombres" value={formData.nombres} onChange={handleChange} required />
-                <input type="text" name="carnet_identidad" placeholder="CI" value={formData.carnet_identidad} onChange={handleChange} required />
+                <div>
+                    <input
+                        type="text"
+                        name="apellido_paterno"
+                        placeholder="Apellido Paterno"
+                        value={formData.apellido_paterno}
+                        onChange={handleChange}
+                        required
+                        className={fieldErrors.apellido_paterno ? 'input-error' : (formData.apellido_paterno ? 'input-ok' : '')}
+                    />
+                    {fieldErrors.apellido_paterno && <div className="error-message">{fieldErrors.apellido_paterno}</div>}
+                </div>
+                <div>
+                    <input
+                        type="text"
+                        name="apellido_materno"
+                        placeholder="Apellido Materno"
+                        value={formData.apellido_materno}
+                        onChange={handleChange}
+                        required
+                        className={fieldErrors.apellido_materno ? 'input-error' : (formData.apellido_materno ? 'input-ok' : '')}
+                    />
+                    {fieldErrors.apellido_materno && <div className="error-message">{fieldErrors.apellido_materno}</div>}
+                </div>
+                <div>
+                    <input
+                        type="text"
+                        name="nombres"
+                        placeholder="Nombres"
+                        value={formData.nombres}
+                        onChange={handleChange}
+                        required
+                        className={fieldErrors.nombres ? 'input-error' : (formData.nombres ? 'input-ok' : '')}
+                    />
+                    {fieldErrors.nombres && <div className="error-message">{fieldErrors.nombres}</div>}
+                </div>
+                <div>
+                    <input
+                        type="text"
+                        name="carnet_identidad"
+                        placeholder="CI"
+                        value={formData.carnet_identidad}
+                        onChange={handleChange}
+                        required
+                        className={fieldErrors.carnet_identidad ? 'input-error' : (formData.carnet_identidad ? 'input-ok' : '')}
+                    />
+                    {fieldErrors.carnet_identidad && <div className="error-message">{fieldErrors.carnet_identidad}</div>}
+                </div>
                 <select name="expedido" value={formData.expedido} onChange={handleChange}>
                     <option value="">Expedido</option><option value="LP">LP</option><option value="SC">SC</option><option value="CB">CB</option>
                 </select>
@@ -125,9 +275,45 @@ const Estudiantes = () => {
                 </select>
 
                 {/* FECHA DE NACIMIENTO */}
-                <input type="number" name="fecha_nac_dia" placeholder="Día Nac." value={formData.fecha_nac_dia} onChange={handleChange} min="1" max="31" />
-                <input type="number" name="fecha_nac_mes" placeholder="Mes Nac." value={formData.fecha_nac_mes} onChange={handleChange} min="1" max="12" />
-                <input type="number" name="fecha_nac_anio" placeholder="Año Nac." value={formData.fecha_nac_anio} onChange={handleChange} min="1990" max="2024" />
+                <div>
+                    <input
+                        type="number"
+                        name="fecha_nac_dia"
+                        placeholder="Día Nac."
+                        value={formData.fecha_nac_dia}
+                        onChange={handleChange}
+                        min="1"
+                        max="31"
+                        className={fieldErrors.fecha_nac_dia ? 'input-error' : (formData.fecha_nac_dia ? 'input-ok' : '')}
+                    />
+                    {fieldErrors.fecha_nac_dia && <div className="error-message">{fieldErrors.fecha_nac_dia}</div>}
+                </div>
+                <div>
+                    <input
+                        type="number"
+                        name="fecha_nac_mes"
+                        placeholder="Mes Nac."
+                        value={formData.fecha_nac_mes}
+                        onChange={handleChange}
+                        min="1"
+                        max="12"
+                        className={fieldErrors.fecha_nac_mes ? 'input-error' : (formData.fecha_nac_mes ? 'input-ok' : '')}
+                    />
+                    {fieldErrors.fecha_nac_mes && <div className="error-message">{fieldErrors.fecha_nac_mes}</div>}
+                </div>
+                <div>
+                    <input
+                        type="number"
+                        name="fecha_nac_anio"
+                        placeholder="Año Nac."
+                        value={formData.fecha_nac_anio}
+                        onChange={handleChange}
+                        min="1990"
+                        max="2024"
+                        className={fieldErrors.fecha_nac_anio ? 'input-error' : (formData.fecha_nac_anio ? 'input-ok' : '')}
+                    />
+                    {fieldErrors.fecha_nac_anio && <div className="error-message">{fieldErrors.fecha_nac_anio}</div>}
+                </div>
 
                 <input type="text" name="desviado_procedencia" placeholder="Procedencia" value={formData.desviado_procedencia} onChange={handleChange} />
 
@@ -135,7 +321,17 @@ const Estudiantes = () => {
                 <h3 style={{ gridColumn: '1 / -1', borderBottom: '1px solid #ccc', paddingBottom: '10px' }}>Datos del Tutor</h3>
                 <input type="text" name="apellidos_nombres_tutor" placeholder="A. y N. Tutor" value={formData.apellidos_nombres_tutor} onChange={handleChange} />
                 <input type="text" name="ci_tutor" placeholder="CI Tutor" value={formData.ci_tutor} onChange={handleChange} />
-                <input type="text" name="telefono_celular_tutor" placeholder="Teléfono" value={formData.telefono_celular_tutor} onChange={handleChange} />
+                <div>
+                    <input
+                        type="text"
+                        name="telefono_celular_tutor"
+                        placeholder="Teléfono"
+                        value={formData.telefono_celular_tutor}
+                        onChange={handleChange}
+                        className={fieldErrors.telefono_celular_tutor ? 'input-error' : (formData.telefono_celular_tutor ? 'input-ok' : '')}
+                    />
+                    {fieldErrors.telefono_celular_tutor && <div className="error-message">{fieldErrors.telefono_celular_tutor}</div>}
+                </div>
                 <input type="text" name="domicilio" placeholder="Domicilio" value={formData.domicilio} onChange={handleChange} style={{ gridColumn: '1 / -1' }} />
 
                 <div style={{ gridColumn: '1 / -1', textAlign: 'right' }}>

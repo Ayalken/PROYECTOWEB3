@@ -13,6 +13,11 @@ export const insertaEstudiante = async (data) => {
     return { id: resultado.insertId, ...data };
 };
 
+export const buscarPorCI = async (carnet_identidad) => {
+    const [resultado] = await db.query("SELECT id FROM estudiante WHERE carnet_identidad = ? LIMIT 1", [carnet_identidad]);
+    return resultado[0] || null;
+};
+
 export const actualizaEstudiante = async (id, data) => {
     await db.query("UPDATE estudiante SET ? WHERE id = ?", [data, id]);
     return { id, ...data };

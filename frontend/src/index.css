@@ -103,6 +103,16 @@ input[type="text"], input[type="password"], input[type="number"], select {
     border-radius: 4px;
 }
 
+/* Visual feedback for validation */
+.input-error {
+  border-color: #dc3545 !important;
+  box-shadow: 0 0 0 3px rgba(220,53,69,0.06);
+}
+.input-ok {
+  border-color: #28a745 !important;
+  box-shadow: 0 0 0 3px rgba(40,167,69,0.04);
+}
+
 button {
   padding: 10px 15px;
   border: none;
