@@ -18,6 +18,21 @@ export const buscarPorCI = async (carnet_identidad) => {
     return resultado[0] || null;
 };
 
+export const buscarPorNombre = async (apellidos_nombres) => {
+    const [resultado] = await db.query("SELECT id FROM estudiante WHERE apellidos_nombres = ? LIMIT 1", [apellidos_nombres]);
+    return resultado[0] || null;
+};
+
+export const buscarPorCIExcludingId = async (carnet_identidad, id) => {
+    const [resultado] = await db.query("SELECT id FROM estudiante WHERE carnet_identidad = ? AND id != ? LIMIT 1", [carnet_identidad, id]);
+    return resultado[0] || null;
+};
+
+export const buscarPorNombreExcludingId = async (apellidos_nombres, id) => {
+    const [resultado] = await db.query("SELECT id FROM estudiante WHERE apellidos_nombres = ? AND id != ? LIMIT 1", [apellidos_nombres, id]);
+    return resultado[0] || null;
+};
+
 export const actualizaEstudiante = async (id, data) => {
     await db.query("UPDATE estudiante SET ? WHERE id = ?", [data, id]);
     return { id, ...data };

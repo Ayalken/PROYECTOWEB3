@@ -215,7 +215,7 @@ const Estudiantes = () => {
 
     return (
         <div className="container">
-            <h2>📋 Cuadro de Filiación y Registro de Estudiantes (CRUD)</h2>
+            <h2>📋 Cuadro de Filiación y Registro de Estudiantes</h2>
             {message && <p className={message.includes('Error') || message.startsWith('Corrija') ? 'error-message' : 'success-message'} style={{ whiteSpace: 'pre-line' }}>{message}</p>}
 
             {/* Lista detallada de errores por campo (si los hay) */}
@@ -379,6 +379,7 @@ const Estudiantes = () => {
                         <th>F. Nac.</th>
                         <th>Tutor</th>
                         <th>Teléfono</th>
+                        <th>Domicilio</th>
                         <th style={{ minWidth: '150px' }}>Acciones</th>
                     </tr>
                 </thead>
@@ -393,6 +394,7 @@ const Estudiantes = () => {
                             <td>{`${e.fecha_nac_dia || '00'}/${e.fecha_nac_mes || '00'}/${e.fecha_nac_anio || '0000'}`}</td>
                             <td>{e.apellidos_nombres_tutor}</td>
                             <td>{e.telefono_celular_tutor}</td>
+                            <td>{e.domicilio}</td>
                             <td>
                                 <button onClick={() => handleEdit(e)}>Editar</button>
                                 <button onClick={() => handleDelete(e.id)} className="danger-btn" style={{ marginLeft: '5px' }}>Elim. Lógica</button>

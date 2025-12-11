@@ -1,6 +1,5 @@
 // /controlador/estudianteController.js
-import { obtTodosEstudiantes, insertaEstudiante, actualizaEstudiante, eliminaLogicoEstudiante } from "../modelo/estudianteModel.js";
-import { buscarPorCI } from "../modelo/estudianteModel.js";
+import { obtTodosEstudiantes, insertaEstudiante, actualizaEstudiante, eliminaLogicoEstudiante, buscarPorCI, buscarPorNombre, buscarPorCIExcludingId, buscarPorNombreExcludingId } from "../modelo/estudianteModel.js";
 
 // Función de validación: acepta combinación vieja (`apellidos_nombres`) o nueva (apellido_paterno, apellido_materno, nombres)
 const validarDatosEstudiante = (data) => {
@@ -40,6 +39,19 @@ export const crear = async (req, res) => {
         const data = { ...req.body };
         if (data.apellido_paterno && data.apellido_materno && data.nombres) {
             data.apellidos_nombres = `${data.apellido_paterno} ${data.apellido_materno} ${data.nombres}`.trim();
+            // Eliminar los campos temporales que no existen en la tabla `estudiante`
+            delete data.apellido_paterno;
+            delete data.apellido_materno;
+            delete data.nombres;
+        }
+        // Comprobaciones de duplicados: CI y nombre completo
+        if (data.carnet_identidad) {
+            const existenteCI = await buscarPorCI(data.carnet_identidad);
+            if (existenteCI) return res.status(400).json({ mensaje: 'CI ya registrado en el sistema.' });
+        }
+        if (data.apellidos_nombres) {
+            const existenteNombre = await buscarPorNombre(data.apellidos_nombres);
+            if (existenteNombre) return res.status(400).json({ mensaje: 'Ya existe un estudiante con ese nombre y apellidos.' });
         }
         const resultado = await insertaEstudiante(data);
         res.json({ mensaje: "Estudiante registrado", resultado });
@@ -63,6 +75,20 @@ export const actualizar = async (req, res) => {
         const data = { ...req.body };
         if (data.apellido_paterno && data.apellido_materno && data.nombres) {
             data.apellidos_nombres = `${data.apellido_paterno} ${data.apellido_materno} ${data.nombres}`.trim();
+            // Eliminar los campos temporales antes de enviar a la BD
+            delete data.apellido_paterno;
+            delete data.apellido_materno;
+            delete data.nombres;
+        }
+        // Validar duplicados al actualizar (excluir el registro actual)
+        const idActual = req.params.id;
+        if (data.carnet_identidad) {
+            const existenteCI = await buscarPorCIExcludingId(data.carnet_identidad, idActual);
+            if (existenteCI) return res.status(400).json({ mensaje: 'CI ya registrado en otro estudiante.' });
+        }
+        if (data.apellidos_nombres) {
+            const existenteNombre = await buscarPorNombreExcludingId(data.apellidos_nombres, idActual);
+            if (existenteNombre) return res.status(400).json({ mensaje: 'Otro estudiante ya tiene ese nombre y apellidos.' });
         }
         const resultado = await actualizaEstudiante(req.params.id, data);
         res.json({ mensaje: "Estudiante actualizado", resultado });
