@@ -64,14 +64,22 @@ const Estudiantes = () => {
             try {
                 const res = await checkCI(ci, editingId);
                 if (res.data && res.data.exists) {
-                    // Obtener datos completos para ofrecer carga
+                    // Obtener datos completos
                     try {
                         const full = await getEstudianteByCI(ci);
-                        setCiFound(full.data || null);
+                        const estudianteFull = full.data || null;
+                        setFieldErrors(prev => ({ ...prev, carnet_identidad: 'CI ya registrado en el sistema.' }));
+                        // Si no estamos editando otro registro, cargar automáticamente
+                        if (!editingId && estudianteFull) {
+                            loadFoundByCI(estudianteFull);
+                            return;
+                        }
+                        // si hay edición en curso, guardar para posible carga manual
+                        setCiFound(estudianteFull);
                     } catch (e) {
                         setCiFound(null);
                     }
-                    setFieldErrors(prev => ({ ...prev, carnet_identidad: 'CI ya registrado en el sistema.' }));
+                    
                 } else {
                     setFieldErrors(prev => { const copy = { ...prev }; delete copy.carnet_identidad; return copy; });
                     setCiFound(null);
@@ -199,9 +207,9 @@ const Estudiantes = () => {
         setMessage('');
     };
 
-    const loadFoundByCI = () => {
-        if (!ciFound) return;
-        const estudiante = ciFound;
+    const loadFoundByCI = (estudianteParam = null) => {
+        const estudiante = estudianteParam || ciFound;
+        if (!estudiante) return;
         const parts = (estudiante.apellidos_nombres || '').trim().split(/\s+/);
         const apellido_paterno = parts[0] || '';
         const apellido_materno = parts[1] || '';
