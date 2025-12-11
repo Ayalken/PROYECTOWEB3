@@ -1,5 +1,5 @@
 // /controlador/estudianteController.js
-import { obtTodosEstudiantes, insertaEstudiante, actualizaEstudiante, eliminaLogicoEstudiante, buscarPorCI, buscarPorNombre, buscarPorCIExcludingId, buscarPorNombreExcludingId, obtEstudiantePorCI } from "../modelo/estudianteModel.js";
+import { obtTodosEstudiantes, insertaEstudiante, actualizaEstudiante, eliminaLogicoEstudiante, buscarPorCI, buscarPorNombre, buscarPorCIExcludingId, buscarPorNombreExcludingId, obtEstudiantePorCI, obtEstudiantePorId } from "../modelo/estudianteModel.js";
 
 // Función de validación: acepta combinación vieja (`apellidos_nombres`) o nueva (apellido_paterno, apellido_materno, nombres)
 const validarDatosEstudiante = (data) => {
@@ -165,6 +165,21 @@ export const obtenerPorCI = async (req, res) => {
     } catch (err) {
         console.error(`[${new Date().toISOString()}] Error en obtenerPorCI:`, err && err.stack ? err.stack : err);
         const resp = { mensaje: 'Error obteniendo estudiante por CI' };
+        if (process.env.NODE_ENV === 'development') resp.error = err.message;
+        res.status(500).json(resp);
+    }
+};
+
+export const obtenerPorId = async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        if (isNaN(id)) return res.status(400).json({ mensaje: 'ID inválido' });
+        const estudiante = await obtEstudiantePorId(id);
+        if (!estudiante) return res.status(404).json({ mensaje: 'No se encontró estudiante con ese ID' });
+        res.json(estudiante);
+    } catch (err) {
+        console.error(`[${new Date().toISOString()}] Error en obtenerPorId:`, err && err.stack ? err.stack : err);
+        const resp = { mensaje: 'Error obteniendo estudiante por ID' };
         if (process.env.NODE_ENV === 'development') resp.error = err.message;
         res.status(500).json(resp);
     }
