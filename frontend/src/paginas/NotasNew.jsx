@@ -60,28 +60,43 @@ const Notas = () => {
                         });
 
                         if (response.data && Array.isArray(response.data)) {
-                            // Agrupar notas por tipo
-                            const notasPorTipo = { tareas: [], proyectos: [], examenes: [] };
+                            // Agrupar notas por tipo manteniendo descripción e id
+                            const notasPorTipo = { tareas: {}, proyectos: {}, examenes: {} };
                             const columnasUsadas = { tareas: new Set(), proyectos: new Set(), examenes: new Set() };
                             let notaAsistencia = 0;
 
                             response.data.forEach(nota => {
                                 if (nota.tipo === 'asistencia') {
                                     // Guardar nota de asistencia por separado
-                                    notaAsistencia = nota.nota;
+                                    notaAsistencia = parseFloat(nota.nota) || 0;
                                 } else if (nota.tipo === 'tarea') {
-                                    notasPorTipo.tareas.push(nota.nota);
+                                    notasPorTipo.tareas[nota.descripcion] = parseFloat(nota.nota) || 0;
                                     columnasUsadas.tareas.add(nota.descripcion);
                                 } else if (nota.tipo === 'proyecto') {
-                                    notasPorTipo.proyectos.push(nota.nota);
+                                    notasPorTipo.proyectos[nota.descripcion] = parseFloat(nota.nota) || 0;
                                     columnasUsadas.proyectos.add(nota.descripcion);
                                 } else if (nota.tipo === 'examen') {
-                                    notasPorTipo.examenes.push(nota.nota);
+                                    notasPorTipo.examenes[nota.descripcion] = parseFloat(nota.nota) || 0;
                                     columnasUsadas.examenes.add(nota.descripcion);
                                 }
                             });
 
-                            notasData[estudiante.id] = notasPorTipo;
+                            // Convertir a arrays con los nombres de columnas
+                            const tareasArr = Array.from(columnasUsadas.tareas).length > 0 
+                                ? Array.from(columnasUsadas.tareas).map(desc => notasPorTipo.tareas[desc] || 0)
+                                : [];
+                            const proyectosArr = Array.from(columnasUsadas.proyectos).length > 0 
+                                ? Array.from(columnasUsadas.proyectos).map(desc => notasPorTipo.proyectos[desc] || 0)
+                                : [];
+                            const examenesArr = Array.from(columnasUsadas.examenes).length > 0 
+                                ? Array.from(columnasUsadas.examenes).map(desc => notasPorTipo.examenes[desc] || 0)
+                                : [];
+
+                            notasData[estudiante.id] = { 
+                                tareas: tareasArr, 
+                                proyectos: proyectosArr, 
+                                examenes: examenesArr 
+                            };
                             asistenciaData[estudiante.id] = notaAsistencia;
 
                             // Actualizar columnas si hay datos guardados
@@ -308,9 +323,15 @@ const Notas = () => {
                 <tbody>
                     {estudiantes.map((e, index) => {
                         const currentNota = (notasPorArea[currentKey] && notasPorArea[currentKey][e.id]) || { tareas: [], proyectos: [], examenes: [] };
-                        const arrTareas = currentNota.tareas || Array(tareas.length).fill(0);
-                        const arrProyectos = currentNota.proyectos || Array(proyectos.length).fill(0);
-                        const arrExamenes = currentNota.examenes || Array(examenes.length).fill(0);
+                        // Asegurar que los arrays tengan la longitud correcta según las columnas actuales
+                        const arrTareas = currentNota.tareas ? [...currentNota.tareas] : [];
+                        const arrProyectos = currentNota.proyectos ? [...currentNota.proyectos] : [];
+                        const arrExamenes = currentNota.examenes ? [...currentNota.examenes] : [];
+                        
+                        // Rellenar con 0 si hay menos elementos que columnas
+                        while (arrTareas.length < tareas.length) arrTareas.push(0);
+                        while (arrProyectos.length < proyectos.length) arrProyectos.push(0);
+                        while (arrExamenes.length < examenes.length) arrExamenes.push(0);
 
                         const promTareas = promedioGrupo(arrTareas);
                         const promProyectos = promedioGrupo(arrProyectos);
