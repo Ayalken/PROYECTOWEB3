@@ -118,7 +118,13 @@ export const checkCI = async (req, res) => {
     try {
         const ci = req.params.ci;
         if (!ci) return res.status(400).json({ mensaje: 'CI requerido' });
-        const encontrado = await buscarPorCI(ci);
+        const excludeId = req.query.excludeId;
+        let encontrado = null;
+        if (excludeId) {
+            encontrado = await buscarPorCIExcludingId(ci, excludeId);
+        } else {
+            encontrado = await buscarPorCI(ci);
+        }
         res.json({ exists: !!encontrado });
     } catch (err) {
         console.error(`[${new Date().toISOString()}] Error en checkCI:`, err && err.stack ? err.stack : err);

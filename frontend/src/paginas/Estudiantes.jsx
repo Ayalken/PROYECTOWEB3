@@ -60,7 +60,7 @@ const Estudiantes = () => {
         }
         ciCheckRef.current = setTimeout(async () => {
             try {
-                const res = await checkCI(ci);
+                const res = await checkCI(ci, editingId);
                 if (res.data && res.data.exists) {
                     setFieldErrors(prev => ({ ...prev, carnet_identidad: 'CI ya registrado en el sistema.' }));
                 } else {
