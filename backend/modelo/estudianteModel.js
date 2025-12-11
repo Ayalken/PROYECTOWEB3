@@ -13,13 +13,30 @@ const normalizeText = (s) => {
 
 export const obtTodosEstudiantes = async () => {
     // La consulta trae solo los activos (Requisito: Eliminación lógica)
-    // Ordenar alfabéticamente por apellido: prioriza columnas separadas si existen,
-    // de lo contrario extrae partes desde `apellidos_nombres`.
-    const orderExpr = `COALESCE(NULLIF(apellido_paterno,''), SUBSTRING_INDEX(apellidos_nombres,' ',1)) ASC,
-                       COALESCE(NULLIF(apellido_materno,''), SUBSTRING_INDEX(SUBSTRING_INDEX(apellidos_nombres,' ',2),' ',-1)) ASC,
-                       COALESCE(NULLIF(nombres,''), SUBSTRING_INDEX(apellidos_nombres,' ',-1)) ASC`;
-    const [resultado] = await db.query(`SELECT * FROM estudiante WHERE activo = 1 ORDER BY ${orderExpr}`);
-    return resultado;
+    const [rows] = await db.query("SELECT * FROM estudiante WHERE activo = 1");
+
+    // Ordenar en JS para evitar errores si las columnas separadas no existen.
+    const pickParts = (r) => {
+        const apellidos_nombres = r.apellidos_nombres || '';
+        const parts = apellidos_nombres.trim().split(/\s+/).filter(Boolean);
+        const apellido_paterno = (r.apellido_paterno || parts[0] || '').toString();
+        const apellido_materno = (r.apellido_materno || parts[1] || '').toString();
+        const nombres = (r.nombres || (parts.length > 2 ? parts.slice(2).join(' ') : parts.slice(2).join(' ')) || '').toString();
+        const normalize = (s) => String(s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+        return [normalize(apellido_paterno), normalize(apellido_materno), normalize(nombres)];
+    };
+
+    rows.sort((a, b) => {
+        const pa = pickParts(a);
+        const pb = pickParts(b);
+        for (let i = 0; i < 3; i++) {
+            if (pa[i] < pb[i]) return -1;
+            if (pa[i] > pb[i]) return 1;
+        }
+        return 0;
+    });
+
+    return rows;
 };
 
 export const insertaEstudiante = async (data) => {
