@@ -49,6 +49,7 @@ const Estudiantes = () => {
     const ciCheckRef = useRef(null);
     const nameCheckRef = useRef(null);
     const [ciFound, setCiFound] = useState(null);
+    const [autoLoadBanner, setAutoLoadBanner] = useState(null);
 
     // Debounced check for CI duplicado
     useEffect(() => {
@@ -72,6 +73,10 @@ const Estudiantes = () => {
                         // Si no estamos editando otro registro, cargar automáticamente
                         if (!editingId && estudianteFull) {
                             loadFoundByCI(estudianteFull);
+                            // Mostrar banner temporal indicando origen de la carga automática
+                            setAutoLoadBanner({ message: `Datos cargados automáticamente desde CI ${ci}` });
+                            // auto-hide after 5s
+                            setTimeout(() => setAutoLoadBanner(null), 5000);
                             return;
                         }
                         // si hay edición en curso, guardar para posible carga manual
@@ -298,6 +303,14 @@ const Estudiantes = () => {
         <div className="container">
             <h2>📋 Cuadro de Filiación y Registro de Estudiantes</h2>
             {message && <p className={message.includes('Error') || message.startsWith('Corrija') ? 'error-message' : 'success-message'} style={{ whiteSpace: 'pre-line' }}>{message}</p>}
+
+            {/* Banner que informa carga automática */}
+            {autoLoadBanner && (
+                <div style={{ background: '#fff3cd', border: '1px solid #ffeeba', padding: '8px', borderRadius: '6px', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ color: '#856404' }}>{autoLoadBanner.message}</div>
+                    <button type="button" onClick={() => setAutoLoadBanner(null)} style={{ marginLeft: '12px' }}>Cerrar</button>
+                </div>
+            )}
 
             {/* Lista detallada de errores por campo (si los hay) */}
             {Object.keys(fieldErrors).length > 0 && (
