@@ -3,20 +3,21 @@ import { obtTodosEstudiantes, insertaEstudiante, actualizaEstudiante, eliminaLog
 
 // Función de validación: acepta combinación vieja (`apellidos_nombres`) o nueva (apellido_paterno, apellido_materno, nombres)
 const validarDatosEstudiante = (data) => {
+    // Retorna null si OK o { field, mensaje }
     // Si vienen separados
     if (data.apellido_paterno || data.apellido_materno || data.nombres) {
-        if (!data.apellido_paterno || !data.apellido_materno || !data.nombres) {
-            return "Apellido paterno, apellido materno y nombres son obligatorios si se usan campos separados.";
-        }
+        if (!data.apellido_paterno) return { field: 'apellido_paterno', mensaje: 'Apellido paterno obligatorio.' };
+        if (!data.apellido_materno) return { field: 'apellido_materno', mensaje: 'Apellido materno obligatorio.' };
+        if (!data.nombres) return { field: 'nombres', mensaje: 'Nombres obligatorios.' };
     } else {
         // Compatibilidad con campo único antiguo
         if (!data.apellidos_nombres || data.apellidos_nombres.length < 5) {
-            return "El nombre y apellido del estudiante es obligatorio.";
+            return { field: 'apellidos_nombres', mensaje: 'Apellidos y nombres obligatorios (o complete los campos separados).' };
         }
     }
 
     if (!data.carnet_identidad) {
-        return "El carnet de identidad del estudiante es obligatorio.";
+        return { field: 'carnet_identidad', mensaje: 'El carnet de identidad del estudiante es obligatorio.' };
     }
     return null;
 };
@@ -32,7 +33,7 @@ export const listar = async (req, res) => {
 
 export const crear = async (req, res) => {
     const error = validarDatosEstudiante(req.body);
-    if (error) return res.status(400).json({ mensaje: error }); // ⬅️ Validación
+        if (error) return res.status(400).json({ field: error.field, mensaje: error.mensaje }); // ⬅️ Validación
 
     try {
         // Si vienen campos separados, componer `apellidos_nombres` pero conservar las columnas separadas
@@ -47,11 +48,11 @@ export const crear = async (req, res) => {
         // Comprobaciones de duplicados: CI y nombre completo
         if (data.carnet_identidad) {
             const existenteCI = await buscarPorCI(data.carnet_identidad);
-            if (existenteCI) return res.status(400).json({ mensaje: 'CI ya registrado en el sistema.' });
+                if (existenteCI) return res.status(400).json({ field: 'carnet_identidad', mensaje: 'CI ya registrado en el sistema.' });
         }
         if (data.apellidos_nombres) {
             const existenteNombre = await buscarPorNombre(data.apellidos_nombres);
-            if (existenteNombre) return res.status(400).json({ mensaje: 'Ya existe un estudiante con ese nombre y apellidos.' });
+                if (existenteNombre) return res.status(400).json({ field: 'apellidos_nombres', mensaje: 'Ya existe un estudiante con ese nombre y apellidos.' });
         }
         const resultado = await insertaEstudiante(data);
         res.json({ mensaje: "Estudiante registrado", resultado });
@@ -69,7 +70,7 @@ export const crear = async (req, res) => {
 
 export const actualizar = async (req, res) => {
     const error = validarDatosEstudiante(req.body);
-    if (error) return res.status(400).json({ mensaje: error }); // ⬅️ Validación
+    if (error) return res.status(400).json({ field: error.field, mensaje: error.mensaje }); // ⬅️ Validación
 
     try {
         const data = { ...req.body };
@@ -84,11 +85,11 @@ export const actualizar = async (req, res) => {
         const idActual = req.params.id;
         if (data.carnet_identidad) {
             const existenteCI = await buscarPorCIExcludingId(data.carnet_identidad, idActual);
-            if (existenteCI) return res.status(400).json({ mensaje: 'CI ya registrado en otro estudiante.' });
+            if (existenteCI) return res.status(400).json({ field: 'carnet_identidad', mensaje: 'CI ya registrado en otro estudiante.' });
         }
         if (data.apellidos_nombres) {
             const existenteNombre = await buscarPorNombreExcludingId(data.apellidos_nombres, idActual);
-            if (existenteNombre) return res.status(400).json({ mensaje: 'Otro estudiante ya tiene ese nombre y apellidos.' });
+            if (existenteNombre) return res.status(400).json({ field: 'apellidos_nombres', mensaje: 'Otro estudiante ya tiene ese nombre y apellidos.' });
         }
         const resultado = await actualizaEstudiante(req.params.id, data);
         res.json({ mensaje: "Estudiante actualizado", resultado });

@@ -216,8 +216,14 @@ const Estudiantes = () => {
             fetchEstudiantes();
             setFieldErrors({});
         } catch (error) {
-            const errMsg = error.response?.data?.mensaje || error.response?.data?.error || error.message || 'Verifique los datos.';
-            setMessage(`Error al guardar: ${errMsg}`);
+            const resp = error.response?.data;
+            if (resp && resp.field) {
+                setFieldErrors(prev => ({ ...prev, [resp.field]: resp.mensaje }));
+                setMessage(`Error al guardar: ${resp.mensaje}`);
+            } else {
+                const errMsg = resp?.mensaje || resp?.error || error.message || 'Verifique los datos.';
+                setMessage(`Error al guardar: ${errMsg}`);
+            }
         }
     };
 
