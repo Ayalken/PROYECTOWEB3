@@ -164,3 +164,68 @@ export const generarReportePDFGeneral = async (req, res) => {
         res.status(500).json({ mensaje: "Error al generar el reporte PDF general" });
     }
 };
+
+// Obtener notas de detalle para reporte (tabla de notas registradas)
+export const obtenerNotasReporte = async (req, res) => {
+    try {
+        const { idEstudiante, semestre } = req.query;
+        
+        let query = `
+            SELECT 
+                e.id as idEstudiante,
+                e.apellidos_nombres,
+                e.carnet_identidad,
+                nd.semestre,
+                nd.tipo,
+                nd.descripcion,
+                nd.nota,
+                nd.materia_id
+            FROM estudiante e
+            LEFT JOIN nota_detalle nd ON e.id = nd.idEstudiante
+            WHERE e.activo = 1
+        `;
+        
+        const params = [];
+        
+        if (idEstudiante) {
+            query += ` AND e.id = ?`;
+            params.push(idEstudiante);
+        }
+        
+        if (semestre) {
+            query += ` AND nd.semestre = ?`;
+            params.push(semestre);
+        }
+        
+        query += ` ORDER BY e.apellidos_nombres, nd.semestre, nd.tipo`;
+        
+        const [notas] = await db.query(query, params);
+        
+        // Agrupar por estudiante
+        const datosAgrupados = {};
+        notas.forEach(item => {
+            if (!datosAgrupados[item.idEstudiante]) {
+                datosAgrupados[item.idEstudiante] = {
+                    id: item.idEstudiante,
+                    nombres: item.apellidos_nombres,
+                    ci: item.carnet_identidad,
+                    notas: []
+                };
+            }
+            if (item.semestre) {
+                datosAgrupados[item.idEstudiante].notas.push({
+                    semestre: item.semestre,
+                    tipo: item.tipo,
+                    descripcion: item.descripcion,
+                    nota: item.nota,
+                    materiaId: item.materia_id
+                });
+            }
+        });
+        
+        res.json(Object.values(datosAgrupados));
+    } catch (err) {
+        console.error("Error al obtener notas para reporte:", err);
+        res.status(500).json({ mensaje: "Error al obtener notas para reporte", error: err.message });
+    }
+};

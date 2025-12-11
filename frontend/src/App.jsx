@@ -8,6 +8,7 @@ import Menu from './componentes/Menu';
 import Dashboard from './paginas/Dashboard';
 import Estudiantes from './paginas/Estudiantes';
 import Notas from './paginas/NotasNew';
+import Reportes from './paginas/Reportes';
 import Asistencia from './componentes/Asistencia.jsx';
 import GestionDocentes from './componentes/GestionDocentes.jsx';
 import GestionUsuarios from './componentes/GestionUsuarios.jsx';
@@ -60,6 +61,9 @@ const App = () => {
 
                         {/* Registro de Asistencia (Rol: Docente o Admin) */}
                         <Route path="/asistencia" element={<ProtectedRoute allowedRoles={['admin', 'docente']}><Asistencia /></ProtectedRoute>} />
+
+                        {/* Reportes de Notas (Rol: Docente o Admin) */}
+                        <Route path="/reportes" element={<ProtectedRoute allowedRoles={['admin', 'docente']}><Reportes /></ProtectedRoute>} />
 
                         {/* Gestión de Docentes (Solo Admin) */}
                         <Route path="/gestion-docentes" element={<ProtectedRoute allowedRoles={['admin']}><GestionDocentes /></ProtectedRoute>} />

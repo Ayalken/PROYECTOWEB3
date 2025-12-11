@@ -21,6 +21,10 @@ const Menu = ({ onLogout, userRole }) => {
                 <Link to="/asistencia">✅ Registro de Asistencia</Link>
             )}
 
+            {isDocente && (
+                <Link to="/reportes">📊 Reporte de Notas</Link>
+            )}
+
             {isAdmin && (
                 <Link to="/gestion-docentes">👨‍🏫 Gestión de Docentes</Link>
             )}
