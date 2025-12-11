@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getEstudiantes, createEstudiante, updateEstudiante, deleteEstudiante, checkCI } from '../api/estudiantes';
+import { getEstudiantes, createEstudiante, updateEstudiante, deleteEstudiante, checkCI, checkNombre } from '../api/estudiantes';
 import { useRef } from 'react';
 import { getUserRole } from '../api/auth';
 
@@ -47,6 +47,7 @@ const Estudiantes = () => {
     };
 
     const ciCheckRef = useRef(null);
+    const nameCheckRef = useRef(null);
 
     // Debounced check for CI duplicado
     useEffect(() => {
@@ -71,6 +72,30 @@ const Estudiantes = () => {
         }, 600);
         return () => { if (ciCheckRef.current) clearTimeout(ciCheckRef.current); };
     }, [formData.carnet_identidad]);
+
+    // Debounced check for nombre/apellidos duplicado (construido desde campos separados)
+    useEffect(() => {
+        const { apellido_paterno, apellido_materno, nombres } = formData;
+        const full = (apellido_paterno || apellido_materno || nombres) ? `${apellido_paterno} ${apellido_materno} ${nombres}`.trim() : '';
+        if (nameCheckRef.current) clearTimeout(nameCheckRef.current);
+        if (!full || full.length < 5) {
+            setFieldErrors(prev => { const copy = { ...prev }; delete copy.apellidos_nombres; return copy; });
+            return;
+        }
+        nameCheckRef.current = setTimeout(async () => {
+            try {
+                const res = await checkNombre(full, editingId);
+                if (res.data && res.data.exists) {
+                    setFieldErrors(prev => ({ ...prev, apellidos_nombres: 'Nombre y apellidos ya registrados.' }));
+                } else {
+                    setFieldErrors(prev => { const copy = { ...prev }; delete copy.apellidos_nombres; return copy; });
+                }
+            } catch (err) {
+                // ignore network errors
+            }
+        }, 600);
+        return () => { if (nameCheckRef.current) clearTimeout(nameCheckRef.current); };
+    }, [formData.apellido_paterno, formData.apellido_materno, formData.nombres, editingId]);
 
     const computeProgress = () => {
         const required = ['apellido_paterno','apellido_materno','nombres','carnet_identidad'];

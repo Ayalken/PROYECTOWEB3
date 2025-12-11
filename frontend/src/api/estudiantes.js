@@ -11,3 +11,8 @@ export const updateEstudiante = (id, data) => api.put(`${ESTUDIANTE_URL}/${id}`,
 export const deleteEstudiante = (id) => api.delete(`${ESTUDIANTE_URL}/${id}`);
 
 export const checkCI = (ci) => api.get(`${ESTUDIANTE_URL}/check-ci/${ci}`);
+export const checkNombre = (nombre, excludeId) => {
+	const encoded = encodeURIComponent(nombre);
+	const url = `${ESTUDIANTE_URL}/check-nombre/${encoded}${excludeId ? `?excludeId=${encodeURIComponent(excludeId)}` : ''}`;
+	return api.get(url);
+};

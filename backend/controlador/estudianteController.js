@@ -126,3 +126,24 @@ export const checkCI = async (req, res) => {
         res.status(500).json(resp);
     }
 };
+
+// Comprobar existencia por nombre completo (apellidos_nombres) - usa comparación normalizada en el modelo
+export const checkNombre = async (req, res) => {
+    try {
+        const nombre = req.params.nombre;
+        if (!nombre) return res.status(400).json({ mensaje: 'Nombre requerido' });
+        const excludeId = req.query.excludeId;
+        let encontrado = null;
+        if (excludeId) {
+            encontrado = await buscarPorNombreExcludingId(nombre, excludeId);
+        } else {
+            encontrado = await buscarPorNombre(nombre);
+        }
+        res.json({ exists: !!encontrado });
+    } catch (err) {
+        console.error(`[${new Date().toISOString()}] Error en checkNombre:`, err && err.stack ? err.stack : err);
+        const resp = { mensaje: 'Error verificando nombre' };
+        if (process.env.NODE_ENV === 'development') resp.error = err.message;
+        res.status(500).json(resp);
+    }
+};

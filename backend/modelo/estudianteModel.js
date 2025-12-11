@@ -1,6 +1,16 @@
 import dbExport from "../config/db.js";
 const db = dbExport.pool;
 
+const normalizeText = (s) => {
+    if (!s && s !== '') return '';
+    return String(s)
+        .normalize('NFD')
+        .replace(/\p{Diacritic}/gu, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+};
+
 export const obtTodosEstudiantes = async () => {
     // La consulta trae solo los activos (Requisito: Eliminación lógica)
     const [resultado] = await db.query("SELECT * FROM estudiante WHERE activo = 1");
@@ -19,8 +29,13 @@ export const buscarPorCI = async (carnet_identidad) => {
 };
 
 export const buscarPorNombre = async (apellidos_nombres) => {
-    const [resultado] = await db.query("SELECT id FROM estudiante WHERE apellidos_nombres = ? LIMIT 1", [apellidos_nombres]);
-    return resultado[0] || null;
+    // Traer los activos y comparar normalizado en JS para evitar problemas con acentos/espacios
+    const [rows] = await db.query("SELECT id, apellidos_nombres FROM estudiante WHERE activo = 1");
+    const target = normalizeText(apellidos_nombres || '');
+    for (const r of rows) {
+        if (normalizeText(r.apellidos_nombres || '') === target) return { id: r.id };
+    }
+    return null;
 };
 
 export const buscarPorCIExcludingId = async (carnet_identidad, id) => {
@@ -29,8 +44,12 @@ export const buscarPorCIExcludingId = async (carnet_identidad, id) => {
 };
 
 export const buscarPorNombreExcludingId = async (apellidos_nombres, id) => {
-    const [resultado] = await db.query("SELECT id FROM estudiante WHERE apellidos_nombres = ? AND id != ? LIMIT 1", [apellidos_nombres, id]);
-    return resultado[0] || null;
+    const [rows] = await db.query("SELECT id, apellidos_nombres FROM estudiante WHERE activo = 1 AND id != ?", [id]);
+    const target = normalizeText(apellidos_nombres || '');
+    for (const r of rows) {
+        if (normalizeText(r.apellidos_nombres || '') === target) return { id: r.id };
+    }
+    return null;
 };
 
 export const actualizaEstudiante = async (id, data) => {
