@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getEstudiantes, createEstudiante, updateEstudiante, deleteEstudiante, checkCI, checkNombre } from '../api/estudiantes';
+import { getEstudiantes, createEstudiante, updateEstudiante, deleteEstudiante, checkCI, checkNombre, getEstudianteByCI } from '../api/estudiantes';
 import { useRef } from 'react';
 import { getUserRole } from '../api/auth';
 
@@ -48,6 +48,7 @@ const Estudiantes = () => {
 
     const ciCheckRef = useRef(null);
     const nameCheckRef = useRef(null);
+    const [ciFound, setCiFound] = useState(null);
 
     // Debounced check for CI duplicado
     useEffect(() => {
@@ -56,15 +57,24 @@ const Estudiantes = () => {
         if (!ci || ci.toString().trim() === '') {
             // clear any ci error
             setFieldErrors(prev => { const copy = { ...prev }; delete copy.carnet_identidad; return copy; });
+            setCiFound(null);
             return;
         }
         ciCheckRef.current = setTimeout(async () => {
             try {
                 const res = await checkCI(ci, editingId);
                 if (res.data && res.data.exists) {
+                    // Obtener datos completos para ofrecer carga
+                    try {
+                        const full = await getEstudianteByCI(ci);
+                        setCiFound(full.data || null);
+                    } catch (e) {
+                        setCiFound(null);
+                    }
                     setFieldErrors(prev => ({ ...prev, carnet_identidad: 'CI ya registrado en el sistema.' }));
                 } else {
                     setFieldErrors(prev => { const copy = { ...prev }; delete copy.carnet_identidad; return copy; });
+                    setCiFound(null);
                 }
             } catch (err) {
                 // ignore network errors for CI check
@@ -187,6 +197,38 @@ const Estudiantes = () => {
             curso: estudiante.curso || '5 "B"'
         });
         setMessage('');
+    };
+
+    const loadFoundByCI = () => {
+        if (!ciFound) return;
+        const estudiante = ciFound;
+        const parts = (estudiante.apellidos_nombres || '').trim().split(/\s+/);
+        const apellido_paterno = parts[0] || '';
+        const apellido_materno = parts[1] || '';
+        const nombres = parts.length > 2 ? parts.slice(2).join(' ') : '';
+
+        setEditingId(estudiante.id);
+        setFormData({
+            ...initialFormData,
+            apellido_paterno,
+            apellido_materno,
+            nombres,
+            carnet_identidad: estudiante.carnet_identidad || '',
+            expedido: estudiante.expedido || '',
+            fecha_nac_dia: estudiante.fecha_nac_dia || '',
+            fecha_nac_mes: estudiante.fecha_nac_mes || '',
+            fecha_nac_anio: estudiante.fecha_nac_anio || '',
+            desviado_procedencia: estudiante.desviado_procedencia || '',
+            apellidos_nombres_tutor: estudiante.apellidos_nombres_tutor || '',
+            ci_tutor: estudiante.ci_tutor || '',
+            telefono_celular_tutor: estudiante.telefono_celular_tutor || '',
+            domicilio: estudiante.domicilio || '',
+            unidad_educativa: estudiante.unidad_educativa || 'U.E. CALAMA',
+            curso: estudiante.curso || '5 "B"'
+        });
+        setMessage('Estudiante cargado para edición.');
+        setFieldErrors({});
+        setCiFound(null);
     };
 
     const handleSubmit = async (e) => {
@@ -323,6 +365,13 @@ const Estudiantes = () => {
                         className={fieldErrors.carnet_identidad ? 'input-error' : (formData.carnet_identidad ? 'input-ok' : '')}
                     />
                     {fieldErrors.carnet_identidad && <div className="error-message">{fieldErrors.carnet_identidad}</div>}
+                    {/* Si se encontró un estudiante con este CI, ofrecer carga de datos */}
+                    {ciFound && (
+                        <div style={{ marginTop: '6px' }}>
+                            <strong>Estudiante existente:</strong> {ciFound.apellidos_nombres} — {ciFound.domicilio}
+                            <button type="button" onClick={loadFoundByCI} style={{ marginLeft: '8px' }}>Cargar datos</button>
+                        </div>
+                    )}
                 </div>
                 <select name="expedido" value={formData.expedido} onChange={handleChange}>
                     <option value="">Expedido</option><option value="LP">LP</option><option value="SC">SC</option><option value="CB">CB</option>

@@ -20,3 +20,5 @@ export const checkNombre = (nombre, excludeId) => {
 	const url = `${ESTUDIANTE_URL}/check-nombre/${encoded}${excludeId ? `?excludeId=${encodeURIComponent(excludeId)}` : ''}`;
 	return api.get(url);
 };
+
+export const getEstudianteByCI = (ci) => api.get(`${ESTUDIANTE_URL}/ci/${encodeURIComponent(ci)}`);
