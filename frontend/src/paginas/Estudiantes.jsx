@@ -123,6 +123,18 @@ const Estudiantes = () => {
         return errors;
     };
 
+    const fieldLabels = {
+        apellido_paterno: 'Apellido paterno',
+        apellido_materno: 'Apellido materno',
+        nombres: 'Nombres',
+        apellidos_nombres: 'Apellidos y nombres',
+        carnet_identidad: 'CI',
+        fecha_nac_dia: 'Día de nacimiento',
+        fecha_nac_mes: 'Mes de nacimiento',
+        fecha_nac_anio: 'Año de nacimiento',
+        telefono_celular_tutor: 'Teléfono del tutor'
+    };
+
     const handleEdit = (estudiante) => {
         setEditingId(estudiante.id);
         // Intentar descomponer apellidos_nombres en paterno/materno/nombres
@@ -158,7 +170,9 @@ const Estudiantes = () => {
         const errors = validateForm(formData);
         if (Object.keys(errors).length > 0) {
             setFieldErrors(errors);
-            setMessage('Corrija los errores del formulario.');
+            // Construir mensaje instructivo
+            const lines = Object.keys(errors).map(k => `- ${fieldLabels[k] || k}: ${errors[k]}`);
+            setMessage(`Corrija los siguientes errores:\n${lines.join('\n')}`);
             return;
         }
 
@@ -202,7 +216,19 @@ const Estudiantes = () => {
     return (
         <div className="container">
             <h2>📋 Cuadro de Filiación y Registro de Estudiantes (CRUD)</h2>
-            {message && <p className={message.includes('Error') ? 'error-message' : 'success-message'}>{message}</p>}
+            {message && <p className={message.includes('Error') || message.startsWith('Corrija') ? 'error-message' : 'success-message'} style={{ whiteSpace: 'pre-line' }}>{message}</p>}
+
+            {/* Lista detallada de errores por campo (si los hay) */}
+            {Object.keys(fieldErrors).length > 0 && (
+                <div style={{ marginBottom: '12px' }}>
+                    <strong>Cómo corregir:</strong>
+                    <ul>
+                        {Object.keys(fieldErrors).map(key => (
+                            <li key={key}>{(fieldLabels[key] || key) + ': ' + fieldErrors[key]}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
 
             {/* Progress bar */}
             <div style={{ margin: '10px 0' }}>
