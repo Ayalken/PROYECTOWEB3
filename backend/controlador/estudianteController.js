@@ -1,5 +1,5 @@
 // /controlador/estudianteController.js
-import { obtTodosEstudiantes, insertaEstudiante, actualizaEstudiante, eliminaLogicoEstudiante, buscarPorCI, buscarPorNombre, buscarPorCIExcludingId, buscarPorNombreExcludingId } from "../modelo/estudianteModel.js";
+import { obtTodosEstudiantes, insertaEstudiante, actualizaEstudiante, eliminaLogicoEstudiante, buscarPorCI, buscarPorNombre, buscarPorCIExcludingId, buscarPorNombreExcludingId, obtEstudiantePorCI } from "../modelo/estudianteModel.js";
 
 // Función de validación: acepta combinación vieja (`apellidos_nombres`) o nueva (apellido_paterno, apellido_materno, nombres)
 const validarDatosEstudiante = (data) => {
@@ -150,6 +150,21 @@ export const checkNombre = async (req, res) => {
     } catch (err) {
         console.error(`[${new Date().toISOString()}] Error en checkNombre:`, err && err.stack ? err.stack : err);
         const resp = { mensaje: 'Error verificando nombre' };
+        if (process.env.NODE_ENV === 'development') resp.error = err.message;
+        res.status(500).json(resp);
+    }
+};
+
+export const obtenerPorCI = async (req, res) => {
+    try {
+        const ci = req.params.ci;
+        if (!ci) return res.status(400).json({ mensaje: 'CI requerido' });
+        const estudiante = await obtEstudiantePorCI(ci);
+        if (!estudiante) return res.status(404).json({ mensaje: 'No se encontró estudiante con ese CI' });
+        res.json(estudiante);
+    } catch (err) {
+        console.error(`[${new Date().toISOString()}] Error en obtenerPorCI:`, err && err.stack ? err.stack : err);
+        const resp = { mensaje: 'Error obteniendo estudiante por CI' };
         if (process.env.NODE_ENV === 'development') resp.error = err.message;
         res.status(500).json(resp);
     }

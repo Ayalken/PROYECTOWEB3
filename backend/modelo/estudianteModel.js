@@ -50,6 +50,11 @@ export const buscarPorCI = async (carnet_identidad) => {
     return resultado[0] || null;
 };
 
+export const obtEstudiantePorCI = async (carnet_identidad) => {
+    const [rows] = await db.query("SELECT * FROM estudiante WHERE carnet_identidad = ? LIMIT 1", [carnet_identidad]);
+    return rows[0] || null;
+};
+
 export const buscarPorNombre = async (apellidos_nombres) => {
     // Traer los activos y comparar normalizado en JS para evitar problemas con acentos/espacios
     const [rows] = await db.query("SELECT id, apellidos_nombres FROM estudiante WHERE activo = 1");
