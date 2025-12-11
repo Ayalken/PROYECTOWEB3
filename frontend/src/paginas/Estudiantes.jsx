@@ -498,7 +498,7 @@ const Estudiantes = () => {
                             <td>{e.domicilio}</td>
                             <td>
                                 <button onClick={() => handleEdit(e)}>Editar</button>
-                                <button onClick={() => handleDelete(e.id)} className="danger-btn" style={{ marginLeft: '5px' }}>Elim. Lógica</button>
+                                <button onClick={() => handleDelete(e.id)} className="danger-btn" style={{ marginLeft: '5px' }}>Eliminar</button>
                             </td>
                         </tr>
                     ))}
