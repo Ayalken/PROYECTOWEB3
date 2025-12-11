@@ -283,10 +283,10 @@ const Estudiantes = () => {
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('¿Está seguro de eliminar lógicamente este estudiante?')) {
+        if (window.confirm('¿Está seguro de eliminar este estudiante?')) {
             try {
                 await deleteEstudiante(id);
-                setMessage('Estudiante eliminado lógicamente.');
+                setMessage('Estudiante eliminado.');
                 fetchEstudiantes();
             } catch (error) {
                 setMessage('Error al eliminar el estudiante.');
