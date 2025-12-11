@@ -107,7 +107,7 @@ export const actualizar = async (req, res) => {
 export const eliminar = async (req, res) => {
     try {
         const resultado = await eliminaLogicoEstudiante(req.params.id);
-        res.json({ mensaje: "Estudiante eliminado (lógico)", resultado });
+        res.json({ mensaje: "Estudiante eliminado", resultado });
     } catch (err) {
         res.status(500).json(err);
     }
