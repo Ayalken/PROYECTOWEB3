@@ -13,7 +13,12 @@ const normalizeText = (s) => {
 
 export const obtTodosEstudiantes = async () => {
     // La consulta trae solo los activos (Requisito: Eliminación lógica)
-    const [resultado] = await db.query("SELECT * FROM estudiante WHERE activo = 1");
+    // Ordenar alfabéticamente por apellido: prioriza columnas separadas si existen,
+    // de lo contrario extrae partes desde `apellidos_nombres`.
+    const orderExpr = `COALESCE(NULLIF(apellido_paterno,''), SUBSTRING_INDEX(apellidos_nombres,' ',1)) ASC,
+                       COALESCE(NULLIF(apellido_materno,''), SUBSTRING_INDEX(SUBSTRING_INDEX(apellidos_nombres,' ',2),' ',-1)) ASC,
+                       COALESCE(NULLIF(nombres,''), SUBSTRING_INDEX(apellidos_nombres,' ',-1)) ASC`;
+    const [resultado] = await db.query(`SELECT * FROM estudiante WHERE activo = 1 ORDER BY ${orderExpr}`);
     return resultado;
 };
 
