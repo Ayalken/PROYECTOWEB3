@@ -52,7 +52,7 @@ CREATE TABLE nota_detalle_tmp (
     id INT AUTO_INCREMENT PRIMARY KEY,
     idEstudiante INT NOT NULL,
     semestre INT NOT NULL,
-    tipo ENUM('tarea','examen','proyecto') NOT NULL,
+    tipo ENUM('tarea','examen','proyecto','asistencia') NOT NULL,
     descripcion VARCHAR(100),
     nota DECIMAL(5,2) NOT NULL,
     fecha DATE,

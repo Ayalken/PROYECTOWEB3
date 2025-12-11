@@ -156,8 +156,11 @@ const Notas = () => {
         if (!notaData) return;
 
         try {
-            // Primero eliminar notas anteriores de este estudiante para este semestre
-            await api.delete(`/notas-detalle-estudiante?idEstudiante=${idEstudiante}&semestre=${trimestre}`);
+            // Obtener notas previas del estudiante para este semestre
+            const previas = await api.get('/notas-detalle', {
+                params: { idEstudiante, semestre: trimestre }
+            });
+            const notasPrevias = Array.isArray(previas.data) ? previas.data : [];
 
             // Guardar cada tarea, proyecto y examen como registro individual
             const registrosAGuardar = [];
@@ -204,15 +207,28 @@ const Notas = () => {
                 });
             }
 
-            // Guardar todos los registros
+            // Guardar/actualizar todos los registros
             for (const registro of registrosAGuardar) {
-                await api.post('/notas-detalle', registro);
+                // Buscar si existe una nota con el mismo tipo y descripción
+                const existe = notasPrevias.find(n => 
+                    n.tipo === registro.tipo && 
+                    n.descripcion === registro.descripcion
+                );
+
+                if (existe) {
+                    // Actualizar
+                    await api.put(`/notas-detalle/${existe.id}`, { nota: registro.nota });
+                } else {
+                    // Crear
+                    await api.post('/notas-detalle', registro);
+                }
             }
 
             setMessage(`✅ Notas de ${estudiantes.find(e => e.id === idEstudiante)?.apellidos_nombres} guardadas con éxito.`);
             setTimeout(() => setMessage(''), 3000);
         } catch (error) {
             const errorMsg = error.response?.data?.error || error.response?.data?.mensaje || error.message;
+            console.error("Error al guardar:", error);
             setMessage(`❌ Error al guardar notas: ${errorMsg}`);
         }
     };
