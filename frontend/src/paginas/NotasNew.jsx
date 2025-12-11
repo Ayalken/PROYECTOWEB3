@@ -21,6 +21,9 @@ const Notas = () => {
     const tareas = tareasMap[currentKey] || ["Tarea 1"];
     const proyectos = proyectosMap[currentKey] || ["Proyecto 1"];
     const examenes = examenesMap[currentKey] || ["Examen 1"];
+    
+    // Estado para nota de asistencia (tipo: 'asistencia')
+    const [notasAsistencia, setNotasAsistencia] = useState({});
 
     const setTareas = (arr) => setTareasMap(prev => ({ ...prev, [currentKey]: arr }));
     const setProyectos = (arr) => setProyectosMap(prev => ({ ...prev, [currentKey]: arr }));
@@ -47,6 +50,7 @@ const Notas = () => {
             setCargando(true);
             try {
                 const notasData = {};
+                const asistenciaData = {};
 
                 // Obtener todas las notas para cada estudiante
                 for (const estudiante of estudiantes) {
@@ -59,9 +63,13 @@ const Notas = () => {
                             // Agrupar notas por tipo
                             const notasPorTipo = { tareas: [], proyectos: [], examenes: [] };
                             const columnasUsadas = { tareas: new Set(), proyectos: new Set(), examenes: new Set() };
+                            let notaAsistencia = 0;
 
                             response.data.forEach(nota => {
-                                if (nota.tipo === 'tarea') {
+                                if (nota.tipo === 'asistencia') {
+                                    // Guardar nota de asistencia por separado
+                                    notaAsistencia = nota.nota;
+                                } else if (nota.tipo === 'tarea') {
                                     notasPorTipo.tareas.push(nota.nota);
                                     columnasUsadas.tareas.add(nota.descripcion);
                                 } else if (nota.tipo === 'proyecto') {
@@ -74,6 +82,7 @@ const Notas = () => {
                             });
 
                             notasData[estudiante.id] = notasPorTipo;
+                            asistenciaData[estudiante.id] = notaAsistencia;
 
                             // Actualizar columnas si hay datos guardados
                             if (columnasUsadas.tareas.size > 0) {
@@ -104,6 +113,7 @@ const Notas = () => {
                     ...prev,
                     [currentKey]: notasData
                 }));
+                setNotasAsistencia(asistenciaData);
             } catch (error) {
                 console.log('Error al cargar notas:', error.message);
             } finally {
@@ -254,6 +264,7 @@ const Notas = () => {
                         <th rowSpan="2" style={{ backgroundColor: '#e0f7fa' }}>Prom. Tareas</th>
                         <th rowSpan="2" style={{ backgroundColor: '#e0f7fa' }}>Prom. Proy.</th>
                         <th rowSpan="2" style={{ backgroundColor: '#e0f7fa' }}>Prom. Exam.</th>
+                        <th rowSpan="2" style={{ backgroundColor: '#fff3e0' }}>Asistencia</th>
                         <th rowSpan="2" style={{ backgroundColor: '#b2ebf2' }}>Promedio Semestre</th>
                         <th rowSpan="2">Acciones</th>
                     </tr>
@@ -288,7 +299,9 @@ const Notas = () => {
                         const promTareas = promedioGrupo(arrTareas);
                         const promProyectos = promedioGrupo(arrProyectos);
                         const promExamenes = promedioGrupo(arrExamenes);
-                        const promedioSemestre = ((promTareas + promProyectos + promExamenes) / 3).toFixed(2);
+                        const notaAsistencia = notasAsistencia[e.id] || 0;
+                        // Promedio final: (promTareas + promProyectos + promExamenes) / 3 + nota de asistencia
+                        const promedioSemestre = ((promTareas + promProyectos + promExamenes) / 3 + notaAsistencia).toFixed(2);
 
                         return (
                             <tr key={e.id}>
@@ -321,6 +334,7 @@ const Notas = () => {
                                 <td style={{ backgroundColor: '#e0f7fa', fontWeight: 'bold' }}>{promTareas.toFixed(2)}</td>
                                 <td style={{ backgroundColor: '#e0f7fa', fontWeight: 'bold' }}>{promProyectos.toFixed(2)}</td>
                                 <td style={{ backgroundColor: '#e0f7fa', fontWeight: 'bold' }}>{promExamenes.toFixed(2)}</td>
+                                <td style={{ backgroundColor: '#fff3e0', fontWeight: 'bold' }}>{notaAsistencia.toFixed(2)}</td>
                                 <td style={{ backgroundColor: '#b2ebf2', fontWeight: 'bold' }}>{promedioSemestre}</td>
                                 <td>
                                     <button onClick={() => handleSaveNota(e.id)}>Guardar</button>

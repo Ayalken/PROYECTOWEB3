@@ -8,6 +8,7 @@ const Asistencia = () => {
     const [asistenciaRegistrada, setAsistenciaRegistrada] = useState({});
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
+    const [trimestre, setTrimestre] = useState(1);
     const idDocente = localStorage.getItem('docente_id') || '1';
 
     useEffect(() => {
@@ -216,6 +217,78 @@ const Asistencia = () => {
         setNuevaFecha('');
     };
 
+    // Aplicar asistencia como nota: convierte asistencias en entradas en nota_detalle (tipo 'asistencia')
+    // con peso ponderado del 10% sobre 100 (es decir, máximo 10 puntos)
+    const aplicarAsistenciaComoNota = async () => {
+        if (!fechas || fechas.length === 0) {
+            setMessage('⚠️ No hay fechas seleccionadas para calcular asistencia');
+            setTimeout(() => setMessage(''), 3000);
+            return;
+        }
+
+        if (!confirm('¿Desea convertir la asistencia del período seleccionado en notas para el trimestre ' + trimestre + '?\nSe reemplazarán las notas de tipo "asistencia" del mismo trimestre.')) return;
+
+        setLoading(true);
+        try {
+            const PESO_ASISTENCIA = 0.10; // 10% del total semestral
+            
+            for (const est of estudiantes) {
+                const registros = asistenciaRegistrada[est.id] || {};
+                let presentes = 0, atrasos = 0, licencias = 0;
+                Object.values(registros).forEach(r => {
+                    if (r.estado === 'presente') presentes++;
+                    else if (r.estado === 'retardo') atrasos++;
+                    else if (r.estado === 'ausente') licencias++;
+                });
+                const total = presentes + atrasos + licencias;
+                if (total === 0) continue; // nada que convertir
+
+                // Calcular puntaje: presente=1, retardo=0.5, ausente=0
+                const scorePercent = ((presentes + 0.5 * atrasos) / total) * 100;
+                // Aplicar peso: si máximo es 100% en asistencia y vale 10%, entonces
+                // guardamos: scorePercent * PESO_ASISTENCIA (p. ej. 90% * 0.10 = 9 puntos)
+                const notaPonderada = Math.round((scorePercent * PESO_ASISTENCIA) * 100) / 100;
+                const descripcion = `Asistencia (${fechas[0]} - ${fechas[fechas.length - 1]})`;
+
+                // Eliminar notas de tipo 'asistencia' previas para este estudiante y trimestre
+                try {
+                    const existing = await api.get('/notas-detalle', { params: { idEstudiante: est.id, semestre: trimestre } });
+                    if (Array.isArray(existing.data)) {
+                        for (const n of existing.data) {
+                            if (n.tipo === 'asistencia') {
+                                try { await api.delete(`/notas-detalle/${n.id}`); } catch (err) { /* ignore */ }
+                            }
+                        }
+                    }
+                } catch (err) {
+                    // ignorar errores al listar
+                }
+
+                // Crear nueva nota de asistencia (ponderada: máximo 10 puntos)
+                try {
+                    await api.post('/notas-detalle', {
+                        idEstudiante: est.id,
+                        semestre: trimestre,
+                        tipo: 'asistencia',
+                        descripcion,
+                        nota: notaPonderada,
+                        materia_id: null
+                    });
+                } catch (err) {
+                    console.warn('No se pudo crear nota de asistencia para', est.id, err?.message || err);
+                }
+            }
+
+            setMessage('✅ Asistencia aplicada como nota (10% del total)');
+            setTimeout(() => setMessage(''), 3000);
+        } catch (error) {
+            console.error('Error aplicando asistencia como nota', error);
+            setMessage('❌ Error al aplicar asistencia como nota');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Eliminar columna de fecha
     const handleEliminarColumna = (fecha) => {
         const nuevasFechas = fechas.filter(f => f !== fecha);
@@ -244,6 +317,15 @@ const Asistencia = () => {
                 />
                 <button onClick={handleAgregarFecha} style={{ padding: '6px 16px', fontWeight: 'bold' }}>Agregar fecha</button>
                 <span style={{ fontSize: '0.9em', color: '#666' }}>Total columnas: {fechas.length}</span>
+
+                <label style={{ marginLeft: 20 }}>Trimestre:</label>
+                <select value={trimestre} onChange={e => setTrimestre(parseInt(e.target.value, 10))}>
+                    <option value={1}>1</option>
+                    <option value={2}>2</option>
+                    <option value={3}>3</option>
+                </select>
+
+                <button onClick={() => aplicarAsistenciaComoNota()} style={{ marginLeft: 10, padding: '6px 12px' }}>Aplicar asistencia como nota</button>
             </div>
 
             {message && (

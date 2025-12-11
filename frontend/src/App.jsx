@@ -7,7 +7,7 @@ import Login from './componentes/login.jsx';
 import Menu from './componentes/Menu';
 import Dashboard from './paginas/Dashboard';
 import Estudiantes from './paginas/Estudiantes';
-import Notas from './paginas/Notas';
+import Notas from './paginas/NotasNew';
 import Asistencia from './componentes/Asistencia.jsx';
 import GestionDocentes from './componentes/GestionDocentes.jsx';
 import GestionUsuarios from './componentes/GestionUsuarios.jsx';
