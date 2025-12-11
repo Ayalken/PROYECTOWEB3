@@ -32,7 +32,6 @@ app.use("/asistencia", asistenciaRoutes);
 app.use("/notas-detalle", notaDetalleRoutes);
 app.use("/materias", materiaRoutes);
 
-// Ruta de prueba para debuggear nota_detalle
 app.post("/test-nota", async (req, res) => {
     try {
         console.log("POST /test-nota recibida con datos:", req.body);
@@ -90,7 +89,6 @@ app.listen(3000, async () => {
             console.log('Tabla nota_detalle lista');
         } catch (err) {
             console.error('Error creando tabla nota_detalle:', err.message);
-            // Continuar aunque falle, la tabla podría ya existir
         }
     };
 
@@ -108,11 +106,9 @@ app.listen(3000, async () => {
                 )
             `;
             await dbExport.pool.query(createSQL);
-            // intentar añadir columna materia_id a nota_detalle si no existe
             try {
                 await dbExport.pool.query("ALTER TABLE nota_detalle ADD COLUMN IF NOT EXISTS materia_id INT NULL");
             } catch (err) {
-                // ALTER TABLE con IF NOT EXISTS no es soportado en algunas versiones; ignorar
             }
             console.log('✅ Tabla materias lista');
         } catch (err) {
@@ -125,7 +121,6 @@ app.listen(3000, async () => {
     console.log("Servidor backend corriendo en http://localhost:3000");
 });
 
-// Middleware global para capturar errores no manejados en rutas
 app.use((err, req, res, next) => {
     try {
         const timestamp = new Date().toISOString();
@@ -134,14 +129,12 @@ app.use((err, req, res, next) => {
         const ip = req.clientIp || req.ip;
         console.error(`[${timestamp}] Error en ruta ${method} ${route} - IP: ${ip}`);
         console.error(err && err.stack ? err.stack : err);
-        // En desarrollo devolvemos detalle; en producción mensaje genérico
         if (process.env.NODE_ENV === 'development') {
             res.status(500).json({ mensaje: 'Error interno del servidor', error: err.message });
         } else {
             res.status(500).json({ mensaje: 'Error interno del servidor' });
         }
     } catch (e) {
-        // Si algo falla al loggear, enviar respuesta genérica
         console.error('Error dentro del middleware de errores:', e);
         res.status(500).json({ mensaje: 'Error interno del servidor' });
     }

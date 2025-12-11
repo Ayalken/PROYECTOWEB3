@@ -8,7 +8,7 @@ import {
     obtReporteAsistencia
 } from "../modelo/asistenciaModel.js";
 
-// Validación de asistencia
+
 const validarAsistencia = (data) => {
     if (!data.idEstudiante) return "ID del estudiante es requerido";
     if (!data.idDocente) return "ID del docente es requerido";
@@ -20,7 +20,7 @@ const validarAsistencia = (data) => {
     return null;
 };
 
-// Obtener todas las asistencias
+// Obtiene todas las asistencias
 export const listar = async (req, res) => {
     try {
         const resultado = await obtAsistencias();
